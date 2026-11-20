@@ -19,7 +19,7 @@ export function Home({ api }: { api: Api }) {
     return <p aria-busy="true">Loading…</p>;
   }
   if (surveys.length === 0) {
-    return <p>No surveys yet. Save one with <code>POST /definitions</code>.</p>;
+    return <p>No surveys yet. <a href="#/builder">Create one in the builder</a>.</p>;
   }
   return (
     <ul className="surveys">
@@ -27,7 +27,9 @@ export function Home({ api }: { api: Api }) {
         <li key={String(s.id)}>
           <a href={`#/s/${encodeURIComponent(String(s.id))}`}>{s.title ?? String(s.id)}</a>
           {s.description ? <p>{s.description}</p> : null}
-          <small>{s.questions} questions</small>
+          <small>
+            {s.questions} questions · <a href={`#/builder/${encodeURIComponent(String(s.id))}`}>Edit</a>
+          </small>
         </li>
       ))}
     </ul>

@@ -1,16 +1,28 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Api } from './api';
+import { Builder } from './Builder';
 import { Home } from './Home';
 import { Respondent } from './Respondent';
 
-export type Route = { page: 'home' } | { page: 'survey'; id: string; context: Record<string, unknown> };
+export type Route =
+  | { page: 'home' }
+  | { page: 'builder'; id?: string }
+  | { page: 'survey'; id: string; context: Record<string, unknown> };
 
 /**
- * Reads the hash route: `#/` for the list, `#/s/<id>?employed=true&name=Ana` for a survey. Query values become the
+ * Reads the hash route: `#/` for the list, `#/builder[/<id>]` for the builder, `#/s/<id>?employed=true&name=Ana` for
+ * a survey. Query values become the
  * session's context; JSON values (`true`, `3`, `["a"]`) are parsed, anything else stays a string.
  */
 export function parseRoute(hash: string): Route {
   const [path = '', query = ''] = hash.replace(/^#/, '').split('?');
+  if (path === '/builder') {
+    return { page: 'builder' };
+  }
+  const editing = /^\/builder\/([^/]+)$/.exec(path);
+  if (editing?.[1]) {
+    return { page: 'builder', id: decodeURIComponent(editing[1]) };
+  }
   const match = /^\/s\/([^/]+)$/.exec(path);
   if (!match?.[1]) {
     return { page: 'home' };
@@ -44,8 +56,14 @@ export function App({ api: given }: { api?: Api }) {
     <main>
       <header>
         <a href="#/" className="brand">Survey Skipper</a>
+        <nav>
+          <a href="#/">Surveys</a>
+          <a href="#/builder">Builder</a>
+        </nav>
       </header>
-      {route.page === 'survey' ? (
+      {route.page === 'builder' ? (
+        <Builder key={route.id ?? 'new'} api={api} definitionId={route.id} />
+      ) : route.page === 'survey' ? (
         <Respondent key={route.id} api={api} definitionId={route.id} context={Object.keys(route.context).length > 0 ? route.context : undefined} />
       ) : (
         <Home api={api} />

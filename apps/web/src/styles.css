@@ -45,3 +45,38 @@ button:disabled { opacity: 0.5; }
 .surveys li { background: var(--card); border: 1px solid var(--line); border-radius: 0.75rem; padding: 1rem; margin-bottom: 0.75rem; }
 .surveys a { font-weight: 600; color: var(--accent); }
 .surveys small { color: var(--muted); }
+header { display: flex; justify-content: space-between; align-items: center; }
+nav { display: flex; gap: 1rem; }
+nav a { color: var(--accent); }
+main:has(.builder) { max-width: 80rem; }
+.builder { display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 60rem) { .builder { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.editor textarea { min-height: 26rem; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 0.875rem; line-height: 1.45; tab-size: 2; }
+.lint ul { list-style: none; padding: 0; margin: 0.75rem 0; }
+.issue { margin: 0.25rem 0; font-size: 0.9rem; }
+.issue strong { text-transform: uppercase; font-size: 0.75rem; margin-right: 0.25rem; }
+.issue.error strong, p.issue.error { color: var(--danger); }
+.issue.warning strong { color: #9a6700; }
+.issue.clean { color: var(--accent); }
+.save { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+.save input { flex: 1; font: inherit; padding: 0.5rem; border: 1px solid var(--line); border-radius: 0.5rem; background: var(--bg); color: var(--fg); min-width: 0; }
+.save button { font: inherit; padding: 0.5rem 1.25rem; border-radius: 0.5rem; border: 1px solid var(--accent); background: var(--accent); color: var(--card); }
+.saved { color: var(--accent); }
+.tabs { display: flex; gap: 0.25rem; margin-bottom: 0.75rem; }
+.tabs button { font: inherit; padding: 0.4rem 1rem; border: 1px solid var(--line); border-radius: 0.5rem; background: transparent; color: var(--fg); }
+.tabs button[aria-selected='true'] { background: var(--card); border-color: var(--accent); color: var(--accent); }
+.graph-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 0.75rem; padding: 0.75rem; }
+.graph .node rect { fill: var(--bg); stroke: var(--line); }
+.graph .node.error rect { stroke: var(--danger); stroke-width: 2; }
+.graph .node.warning rect { stroke: #9a6700; stroke-width: 2; }
+.graph .node.ending rect { fill: var(--accent); stroke: var(--accent); }
+.graph .node.ending text { fill: var(--card); font-size: 12px; font-weight: 600; }
+.graph .node-id { fill: var(--fg); font-size: 12px; font-weight: 700; font-family: ui-monospace, Menlo, monospace; }
+.graph .node-text { fill: var(--muted); font-size: 11px; }
+.graph .edge { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.graph .edge.conditional { stroke: var(--accent); stroke-dasharray: 5 3; }
+.graph .arrowhead { fill: var(--muted); }
+.preview { background: var(--card); border: 1px solid var(--line); border-radius: 0.75rem; padding: 1rem; }
+.preview .question { background: var(--bg); }
+.preview .actions button { font: inherit; padding: 0.5rem 1rem; border-radius: 0.5rem; border: 1px solid var(--accent); background: var(--accent); color: var(--card); }
+.preview .actions button[type='button'] { background: transparent; color: var(--accent); }
