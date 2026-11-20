@@ -1,4 +1,5 @@
 import * as jsonLogic from 'json-logic-js';
+import type { AnswerValue } from './answer';
 import type { QuestionId } from './question';
 import { isNil } from './utils';
 
@@ -26,12 +27,12 @@ export interface Rule {
 
 /** The data a {@link Condition} is evaluated against. */
 export interface RuleData {
-  /** Valid answer values keyed by question id. Booleans are stored as 1 / 0. */
-  answers: Record<string, string | number>;
+  /** Valid answer values keyed by question id. Multiple-choice answers are lists. */
+  answers: Record<string, AnswerValue>;
   /** The survey's context, such as the respondent's role, locale or experiment group. */
   context: Record<string, unknown>;
   /** The value of the answer to the question being routed from, or `null` if it has none. */
-  answer: string | number | null;
+  answer: AnswerValue | null;
 }
 
 jsonLogic.add_operation('matches', (value: unknown, pattern: unknown): boolean => {

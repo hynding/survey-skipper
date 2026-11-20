@@ -1,6 +1,6 @@
 {
   "name": "survey-skipper-yaml",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Write survey-skipper surveys, including their JsonLogic rules, in YAML",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

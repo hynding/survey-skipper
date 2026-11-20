@@ -108,8 +108,12 @@ export class SurveyDefinition {
     return index === undefined ? undefined : this.questions[index];
   }
 
+  /** The answer-map key for an answer: its value (list values joined with `,`), or `customKey` for custom answers. */
   getAnswerKey(answer: Answer): string {
-    return answer.isCustom ? this.customKey : String(answer.value);
+    if (answer.isCustom) {
+      return this.customKey;
+    }
+    return Array.isArray(answer.value) ? answer.value.map(String).join(',') : String(answer.value);
   }
 
   /**

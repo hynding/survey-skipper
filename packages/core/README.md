@@ -78,6 +78,35 @@ library sees them too.
 - Question ids are read as JsonLogic paths, so ids containing `.` cannot be referenced in `answers.<id>`.
 - To write definitions in YAML, use [`survey-skipper-yaml`](../yaml).
 
+### Question types and validation
+
+Give a question a `type` to say what answer it expects, mark it `required`, and add `validation` rules:
+
+| `type` | Value | Rules that apply |
+| --- | --- | --- |
+| `single` | One of the answer options (anything, if a custom option exists) | |
+| `multi` | A list of answer options | `minSelected`, `maxSelected` |
+| `text` | A string | `minLength`, `maxLength`, `pattern` |
+| `number` | A finite number | `min`, `max` |
+| `rating` | A whole number on a scale | `min`, `max` (default 1 to 5) |
+| `date` | `YYYY-MM-DD` | `min`, `max` as dates |
+| `boolean` | `true` or `false` | |
+
+```ts
+const result = session.answer({ value: 130 }); // the current question is { type: 'number', validation: { max: 120 } }
+result; // => { ok: false, errors: [{ code: 'max', message: 'Must be at most 120' }] }
+```
+
+- `session.answer(answer, question?)` validates, and stores the answer only if it passes.
+  `session.setAnswer(...)` still stores without checking.
+- `session.validate(question?)` checks the stored answer, which reports `required` for a missing one.
+- `validateAnswer(question, answer)` is the same check as a standalone function.
+- Error codes: `required`, `type`, `option`, `min`, `max`, `minLength`, `maxLength`, `pattern`, `minSelected`,
+  `maxSelected`. Messages are plain English defaults; map codes to your own text as needed.
+- Answers keep their types: booleans stay `true`/`false` (2.x and 3.0 stored them as `1`/`0`), and multiple-choice
+  answers are lists, which rules can test with `{ "in": ["dog", { "var": "answer" }] }`. In the answer map, a list
+  answer's key is its values joined with `,`.
+
 ### Going back
 
 `session.back()` returns to the previous question the respondent was shown (or `null` at the start; check with

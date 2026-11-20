@@ -1,12 +1,15 @@
 import { isNil } from './utils';
 
-/** A primitive value an answer can carry. Booleans are stored as 1 / 0. */
-export type AnswerValue = string | number;
+/** A single value an answer can carry. */
+export type ScalarValue = string | number | boolean;
+
+/** The value of an answer: one scalar, or a list of them for multiple-choice questions. */
+export type AnswerValue = ScalarValue | ScalarValue[];
 
 /** Plain-object shape accepted wherever an {@link Answer} is expected. */
 export interface AnswerInput {
   text?: string;
-  value?: AnswerValue | boolean | null;
+  value?: AnswerValue | null;
   isCustom?: boolean;
 }
 
@@ -16,8 +19,8 @@ export class Answer {
   isCustom: boolean;
 
   constructor({ text, value, isCustom = false }: AnswerInput = {}) {
-    this.value = sanitize(value);
-    this.text = text ?? (isNil(this.value) ? undefined : String(value));
+    this.value = Array.isArray(value) ? [...value] : value;
+    this.text = text ?? (isNil(this.value) ? undefined : Array.isArray(this.value) ? this.value.join(', ') : String(this.value));
     this.isCustom = isCustom;
   }
 
@@ -26,13 +29,11 @@ export class Answer {
     return input instanceof Answer ? input : new Answer(input);
   }
 
+  /** An answer is valid when it has a value that is not `null`, `undefined`, an empty string or an empty list. */
   isValid(): this is Answer & { value: AnswerValue } {
-    return this.value !== '' && !isNil(this.value);
+    if (isNil(this.value) || this.value === '') {
+      return false;
+    }
+    return !Array.isArray(this.value) || this.value.length > 0;
   }
-}
-
-function sanitize(value: AnswerInput['value']): AnswerValue | null | undefined {
-  if (value === true) return 1;
-  if (value === false) return 0;
-  return value;
 }

@@ -41,7 +41,7 @@ Grouped by the goal's verbs. Scope: **S** is about a day, **M** a few days, **L*
 | C1 | ✅ Built (3.0). **Split definition from session.** `SurveyDefinition` (questions, rules, answer map, settings, `version`) and `SurveySession` (answers, context, position, history, ending). `Survey` remains as a deprecated wrapper until 4.0. | L |
 | C2 | **Navigation history.** ✅ Built. `history`, `back()`, `canGoBack()`, `getPath()`. Changing an earlier answer moves answers on the abandoned route to `abandonedAnswers` (default) or discards them (`keepAbandonedAnswers: false`). Still to do: `goTo(id)` that respects reachability. | M |
 | C3 | ✅ Built (3.0). **Serialization.** `toJSON()` on both classes with `schemaVersion` (1); constructors restore from it and reject newer schemas. Sessions record `definitionId` / `definitionVersion`. Not yet: migrations between schema versions. | S |
-| C4 | **Typed answer values.** Preserve `string | number | boolean | string[] | null` instead of stringifying; answer keys stop colliding. | S |
+| C4 | ✅ Built (3.1). **Typed answer values.** Answers keep `string | number | boolean` or a list of them; booleans are no longer turned into 1/0. | S |
 
 ### Branching rules and context
 
@@ -58,8 +58,8 @@ Grouped by the goal's verbs. Scope: **S** is about a day, **M** a few days, **L*
 
 | ID | Feature | Scope |
 | --- | --- | --- |
-| A1 | **Question types.** `single`, `multi`, `text`, `number`, `rating`, `date`, `boolean`, each with typed answer values and options. | M |
-| A2 | **Validation.** `required`, `min`/`max`, `minSelected`/`maxSelected`, `pattern`, custom validators. `session.answer()` returns errors instead of silently storing junk. | M |
+| A1 | ✅ Built (3.1). **Question types.** `single`, `multi`, `text`, `number`, `rating`, `date`, `boolean`. | M |
+| A2 | ✅ Built (3.1). **Validation.** `required`, `min`/`max`, `minLength`/`maxLength`, `pattern`, `minSelected`/`maxSelected`. `session.answer()` returns errors and doesn't store invalid answers; `validate()` and `validateAnswer()` check without storing. Custom validators arrive with E1. | M |
 | A3 | **Sections / pages.** Group questions; `getNextPage()` evaluates branching inside the page so batches are correct (replaces `getNextQuestions(n)`). | M |
 | A4 | **Piping.** Templates in question text: `"How long have you owned your {{answers.make}}?"`, resolved per session. | S |
 | A5 | **Fluent builder.** `survey('id').question('car', q => q.single(['yes','no'])).when(eq('car','no')).goTo('commute')` with full type inference. | M |

@@ -130,3 +130,41 @@ Then(
 Then('it routes like a session', function (this: SessionWorld) {
   assert.equal(this.actualQuestion?.id, 'c');
 });
+
+interface AnswerWorld extends SessionWorld {
+  lastResult?: { ok: boolean; errors: { code: string }[] };
+}
+
+When(
+  '{string} answers {string} with JSON {}',
+  function (this: AnswerWorld, name: string, id: string, json: string) {
+    const question = definitionOf(this).getQuestionById(id);
+    assert.ok(question, `No question "${id}"`);
+    this.lastResult = session(this, name).answer({ value: JSON.parse(json) as never }, question);
+  },
+);
+
+Then('the answer is accepted', function (this: AnswerWorld) {
+  assert.deepEqual(this.lastResult, { ok: true, errors: [] });
+});
+
+Then('the answer is rejected with {word}', function (this: AnswerWorld, code: string) {
+  assert.equal(this.lastResult?.ok, false);
+  assert.deepEqual(
+    this.lastResult.errors.map((e) => e.code),
+    [code],
+  );
+});
+
+Then('validating {string} for {string} reports {word}', function (this: AnswerWorld, id: string, name: string, code: string) {
+  const question = definitionOf(this).getQuestionById(id);
+  assert.ok(question);
+  assert.deepEqual(
+    session(this, name).validate(question).map((e) => e.code),
+    [code],
+  );
+});
+
+Then('{string} stored false for {string}', function (this: AnswerWorld, name: string, id: string) {
+  assert.equal(session(this, name).answers[id]?.value, false);
+});

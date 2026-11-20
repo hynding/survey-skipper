@@ -73,3 +73,13 @@ void test('skipIf and version survive a round-trip', () => {
   assert.equal(definition.version, 2);
   assert.deepEqual(definition.questions[0]?.skipIf, { '==': [{ var: 'context.x' }, 1] });
 });
+
+void test('question types and validation survive a round-trip', () => {
+  const text = stringifySurvey({
+    questions: [{ id: 'age', type: 'number', required: true, validation: { min: 0, max: 120 } }],
+  });
+  const [age] = loadSurvey(text).questions;
+  assert.equal(age?.type, 'number');
+  assert.equal(age.required, true);
+  assert.deepEqual(age.validation, { min: 0, max: 120 });
+});
