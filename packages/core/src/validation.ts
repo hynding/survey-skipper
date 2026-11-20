@@ -1,5 +1,5 @@
-import { Answer, type AnswerInput, type AnswerValue, type ScalarValue } from './answer';
-import type { Question } from './question';
+import { Answer, type AnswerInput, type AnswerValue, type ScalarValue } from './answer.js';
+import type { Question } from './question.js';
 
 export type ValidationCode =
   | 'required'

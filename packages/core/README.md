@@ -2,7 +2,7 @@
 
 Customizable surveys whose path branches on rules and context. Framework-agnostic: bring your own UI and storage.
 
-Written in TypeScript and published as CommonJS with type declarations.
+Written in TypeScript and published as both ES modules and CommonJS, with type declarations.
 
 ## Install
 
@@ -161,6 +161,38 @@ const restored = new SurveySession(new SurveyDefinition(JSON.parse(savedDefiniti
 Saved JSON carries `schemaVersion` (currently `SCHEMA_VERSION`, 1). Input from a newer schema is rejected with a
 `RangeError`. A saved session also records `definitionId` and `definitionVersion`, so you can tell which definition it
 ran against.
+
+### Authoring tools
+
+```ts
+import { survey, lt, gte, eq, lintDefinition, simulatePaths, runScript, toMermaid } from 'survey-skipper';
+
+const definition = survey('commute', { version: 1 })
+  .question('age', { type: 'number' }, (q) => q.end('too_young', lt('answer', 18)).goTo('retired', gte('answer', 65)))
+  .question('drive', { type: 'boolean' }, (q) => q.goTo('done', eq('answer', false)))
+  .question('make', { type: 'text' })
+  .question('retired', {}, (q) => q.goTo('done'))
+  .question('done')
+  .build();
+
+lintDefinition(definition);                              // => [] when nothing is wrong
+simulatePaths(definition);                               // every structural route, with endings
+runScript(definition, { answers: { age: 12 } });         // => { questions: ['age'], finished: true, ending: 'too_young' }
+toMermaid(definition);                                   // a flowchart of the branching (also toDot)
+```
+
+- **Builder:** `survey(id, options)` and `.question(id, options, (q) => ...)`, where `q` offers `goTo(target, if?)`,
+  `end(ending, if?)`, `showIf`, `skipIf` and `required`. Condition helpers build JsonLogic: `eq`, `ne`, `gt`, `gte`,
+  `lt`, `lte`, `oneOf`, `includes`, `answered`, `matches`, `and`, `or`, `not`, `v`. `.toInput()` gives the plain JSON
+  instead of a definition.
+- **Lint:** `lintDefinition` reports duplicate ids, malformed rules, unknown targets, rules after an always-matching
+  rule, unreachable questions, conditions that read unknown questions, bad regular expressions and choice questions
+  without options. Each issue has a `severity`, `code`, `message` and `questionId`.
+- **Routes:** `simulatePaths` follows every rule, answer-map entry and fall-through without evaluating conditions,
+  so it shows the survey's shape. `runScript` runs a real session with scripted answers and shows the route a
+  respondent would actually take. `getEdges` exposes the underlying graph.
+- **JSON Schema:** `survey-skipper/schema.json` (draft 2020-12) describes saved definitions, for editors and other
+  languages.
 
 ### More
 

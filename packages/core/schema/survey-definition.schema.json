@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/hynding/survey-skipper/blob/master/packages/core/schema/survey-definition.schema.json",
+  "title": "Survey Skipper definition",
+  "description": "A survey definition as accepted by new SurveyDefinition(...) and produced by definition.toJSON(). Schema version 1.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": { "type": "integer", "minimum": 1, "maximum": 1 },
+    "id": { "$ref": "#/$defs/id" },
+    "version": { "$ref": "#/$defs/id" },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "customKey": { "type": "string" },
+    "keepAbandonedAnswers": { "type": "boolean" },
+    "questions": { "type": "array", "items": { "$ref": "#/$defs/question" } },
+    "answerMap": {
+      "type": "object",
+      "additionalProperties": { "type": "object", "additionalProperties": { "$ref": "#/$defs/id" } }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "id": { "type": ["string", "number"] },
+    "scalar": { "type": ["string", "number", "boolean"] },
+    "value": {
+      "oneOf": [{ "$ref": "#/$defs/scalar" }, { "type": "array", "items": { "$ref": "#/$defs/scalar" } }]
+    },
+    "condition": {
+      "description": "A JsonLogic expression (https://jsonlogic.com).",
+      "type": ["boolean", "object"]
+    },
+    "answer": {
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "value": { "oneOf": [{ "$ref": "#/$defs/value" }, { "type": "null" }] },
+        "isCustom": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "rule": {
+      "type": "object",
+      "properties": {
+        "if": { "$ref": "#/$defs/condition" },
+        "goTo": { "$ref": "#/$defs/id" },
+        "end": { "type": "string", "minLength": 1 }
+      },
+      "oneOf": [{ "required": ["goTo"], "not": { "required": ["end"] } }, { "required": ["end"], "not": { "required": ["goTo"] } }],
+      "additionalProperties": false
+    },
+    "question": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "text": { "type": "string" },
+        "type": { "enum": ["single", "multi", "text", "number", "rating", "date", "boolean"] },
+        "section": { "type": "string" },
+        "required": { "type": "boolean" },
+        "answers": { "type": "array", "items": { "$ref": "#/$defs/answer" } },
+        "rules": { "type": "array", "items": { "$ref": "#/$defs/rule" } },
+        "showIf": { "$ref": "#/$defs/condition" },
+        "skipIf": { "$ref": "#/$defs/condition" },
+        "validation": {
+          "type": "object",
+          "properties": {
+            "min": { "type": ["number", "string"] },
+            "max": { "type": ["number", "string"] },
+            "minLength": { "type": "integer", "minimum": 0 },
+            "maxLength": { "type": "integer", "minimum": 0 },
+            "pattern": { "type": "string" },
+            "minSelected": { "type": "integer", "minimum": 0 },
+            "maxSelected": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

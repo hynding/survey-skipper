@@ -62,15 +62,15 @@ Grouped by the goal's verbs. Scope: **S** is about a day, **M** a few days, **L*
 | A2 | ✅ Built (3.1). **Validation.** `required`, `min`/`max`, `minLength`/`maxLength`, `pattern`, `minSelected`/`maxSelected`. `session.answer()` returns errors and doesn't store invalid answers; `validate()` and `validateAnswer()` check without storing. Custom validators arrive with E1. | M |
 | A3 | ✅ Built (3.2). **Sections / pages.** Questions take a `section`; `getPage()` follows the route the current answers lead to inside the section, and `nextPage()` moves past it. | M |
 | A4 | ✅ Built (3.2). **Piping.** `{{answers.x}}`, `{{context.x}}`, `{{answer}}` in question text via `getQuestionText()` / `renderText()`. | S |
-| A5 | **Fluent builder.** `survey('id').question('car', q => q.single(['yes','no'])).when(eq('car','no')).goTo('commute')` with full type inference. | M |
+| A5 | ✅ Built (3.3). **Fluent builder.** `survey(id).question(id, options, q => q.goTo(...).end(...))` plus JsonLogic condition helpers (`eq`, `lt`, `oneOf`, `includes`, `and`...). Question ids are not type-inferred. | M |
 
 ### Manage
 
 | ID | Feature | Scope |
 | --- | --- | --- |
-| M1 | **Static analysis / lint.** `validateDefinition()` reports dangling targets, unreachable questions, cycles, conditions referencing later or unknown questions, type mismatches (`gt` on a text question). | M |
+| M1 | ✅ Built (3.3). **Static analysis / lint.** `lintDefinition()`: duplicate ids, rule shape, unknown targets, unreachable rules and questions, unknown references, invalid regexes, choice questions without options. | M |
 | M2 | **Versioning.** Definitions carry a version; sessions record which version they ran against; a helper maps answers across versions by question id. | M |
-| M3 | **Path simulation.** Enumerate every possible path (or sample them) for testing: "can a respondent reach `screened_out` without answering `age`?" | M |
+| M3 | ✅ Built (3.3). **Path simulation.** `simulatePaths()` lists structural routes; `runScript()` runs scripted answers through a real session. | M |
 
 ### Track
 
@@ -84,9 +84,9 @@ Grouped by the goal's verbs. Scope: **S** is about a day, **M** a few days, **L*
 
 | ID | Feature | Scope |
 | --- | --- | --- |
-| S1 | **Published JSON Schema** for the definition format, so other tools and languages can author and validate surveys. | S |
-| S2 | **Graph export.** Definition to Mermaid / Graphviz DOT, for docs and reviews of branching logic. | S |
-| S3 | **Dual ESM + CJS build** and a browser-friendly bundle. | S |
+| S1 | ✅ Built (3.3). **Published JSON Schema** at `survey-skipper/schema.json`. | S |
+| S2 | ✅ Built (3.3). **Graph export.** `toMermaid()` and `toDot()`, on top of `getEdges()`. | S |
+| S3 | ✅ Built (3.3). **Dual ESM + CJS build** for core and yaml. A pre-bundled browser file is not provided; bundlers consume the ESM build. | S |
 
 ### Extend
 
