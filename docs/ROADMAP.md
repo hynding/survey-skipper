@@ -1,7 +1,7 @@
 # Survey Skipper roadmap
 
-Status: decisions answered on 2026-11-20 (see section 5). **Built: C1 and C3 (3.0 definition/session split with
-`toJSON` and schema versions), C2 (Back navigation), P1 (pnpm monorepo), R1, R2, R3, R4 and R6 (JsonLogic rules, context, showIf/skipIf, named endings, YAML package).** Other items are still proposals.
+Status: decisions answered on 2026-11-20 (see section 5). **Every item below is built** (marked ✅ with the release
+that shipped it), apart from C2's `goTo(id)`.
 
 Goal of the project: **create, manage, track, share and extend customizable surveys whose path branches on rules and
 context.** This plan maps that goal onto the library as it stands at v2.0.0 (strict TypeScript, PR #1).
@@ -104,7 +104,7 @@ Grouped by the goal's verbs. Scope: **S** is about a day, **M** a few days, **L*
 | P1 | ✅ Built. **pnpm workspace monorepo.** `packages/core` (published as `survey-skipper`), `packages/yaml`, `packages/react`, `apps/server`, `apps/web`. Shared tsconfig, eslint and CI. | M |
 | SV1 | ✅ Built (server 0.1, `apps/server`). **Survey service.** HTTP API for definitions (CRUD, versions), sessions (start, answer, back) and responses, on top of E2 storage adapters. | L |
 | UI1 | ✅ Built (`apps/web` 0.1). **Respondent UI.** Renders a session: question types, validation, Back, progress, with abandoned answers prefilled when a question comes round again. | L |
-| UI2 | **Builder UI.** Edit questions and JsonLogic/YAML rules, see the branching graph (S2) and lint results (M1) live. | L |
+| UI2 | ✅ Built (`apps/web` 0.2, `#/builder`). **Builder UI.** Edit questions and JsonLogic/YAML rules, see the branching graph (S2) and lint results (M1) live. | L |
 
 ## 3. Phased build plan
 

@@ -1,4 +1,4 @@
-import type { SurveyDefinitionJSON, ValidationError } from 'survey-skipper';
+import type { LintIssue, SurveyDefinitionJSON, ValidationError } from 'survey-skipper';
 import type { SessionView } from 'survey-skipper-server';
 
 export type { SessionView, QuestionView } from 'survey-skipper-server';
@@ -40,6 +40,15 @@ export class Api {
     return this.call('GET', `/definitions/${encodeURIComponent(id)}`);
   }
 
+  /** Saves a definition written in YAML. Needs the server's API key when it has one. */
+  saveDefinitionYaml(yaml: string, apiKey?: string): Promise<{ definition: SurveyDefinitionJSON; lint: LintIssue[] }> {
+    const headers: Record<string, string> = { 'content-type': 'application/yaml' };
+    if (apiKey) {
+      headers.authorization = `Bearer ${apiKey}`;
+    }
+    return this.call('POST', '/definitions', yaml, headers);
+  }
+
   startSession(definitionId: string, context?: Record<string, unknown>): Promise<SessionView> {
     return this.call('POST', `/definitions/${encodeURIComponent(definitionId)}/sessions`, context ? { context } : {});
   }
@@ -60,14 +69,15 @@ export class Api {
     return this.call('POST', `/sessions/${encodeURIComponent(sessionId)}/back`);
   }
 
-  private async call<T>(method: string, path: string, body?: unknown): Promise<T> {
+  private async call<T>(method: string, path: string, body?: unknown, extraHeaders: Record<string, string> = {}): Promise<T> {
     const headers: Record<string, string> = { 'content-type': 'application/json' };
     if (this.apiKey) {
       headers.authorization = `Bearer ${this.apiKey}`;
     }
+    Object.assign(headers, extraHeaders);
     const init: RequestInit = { method, headers };
     if (body !== undefined) {
-      init.body = JSON.stringify(body);
+      init.body = typeof body === 'string' ? body : JSON.stringify(body);
     }
     const res = await this.fetcher(`${this.base}${path}`, init);
     const text = await res.text();

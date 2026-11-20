@@ -1,7 +1,18 @@
 # survey-skipper-web
 
-The respondent web app (roadmap UI1). It answers surveys stored in
-[survey-skipper-server](../server), one page at a time.
+The web app for [survey-skipper-server](../server), with two parts: the respondent app (roadmap UI1) and the
+builder (UI2).
+
+## Builder (`#/builder`, or `#/builder/<id>` to edit a saved survey)
+
+- Write the survey in YAML: questions, types, validation, translations and JsonLogic `rules`, `showIf` and `skipIf`.
+- Lint results update as you type. Save stays disabled while there are errors.
+- **Graph** tab: questions in order, fall-through arrows, and rule and answer-map arcs (dashed when conditional, with
+  the condition in a tooltip). It also shows the endings, and outlines questions with lint problems.
+- **Preview** tab: runs the survey in the browser with `survey-skipper-react`, with nothing saved.
+- Save sends the YAML to the server. If the server has an `API_KEY`, enter it once per browser session.
+
+## Respondent app (`#/s/<id>`)
 
 - Every built-in question type: single and multi choice, text, number, rating, date and yes/no.
 - Validation errors from the server, shown next to each question.
