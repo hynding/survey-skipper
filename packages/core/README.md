@@ -162,6 +162,30 @@ Saved JSON carries `schemaVersion` (currently `SCHEMA_VERSION`, 1). Input from a
 `RangeError`. A saved session also records `definitionId` and `definitionVersion`, so you can tell which definition it
 ran against.
 
+### Tracking and analytics
+
+- **Timeline:** every session keeps `session.timeline`, a list of `{ type, questionId?, value?, ending?, at }` events:
+  `shown`, `answered`, `changed`, `skipped` (routed past), `back` and `complete`. It is saved with the session. Pass
+  `{ now }` as the third constructor argument to control the clock. `timeOnQuestions(timeline)` adds up the
+  milliseconds spent on each question.
+- **Computed variables:** a definition's `variables` maps names to JsonLogic expressions, evaluated in order. Read them
+  as `vars.<name>` in rules, `showIf` / `skipIf` and piped text, or with `session.getVariables()`.
+
+  ```ts
+  variables: {
+    total: { '+': [{ var: 'answers.a' }, { var: 'answers.b' }] },
+    promoter: { '>=': [{ var: 'vars.total' }, 15] },
+  }
+  ```
+
+- **Aggregation:** `aggregate(sessions)` takes live sessions or saved session JSON and returns completion counts and
+  rate, endings, per-question `shown` / `answered` / `droppedOff` counts and answer `distribution`, and the most common
+  routes.
+- **Versioning:** `migrateSession(savedState, newDefinition)` moves a saved session onto a changed definition.
+  Answers to removed questions, or answers that no longer validate, move to `abandonedAnswers`. If the respondent's
+  current question was removed, the session resumes at its first unanswered question. It returns the new state and a
+  report of what was kept, removed and invalid.
+
 ### Authoring tools
 
 ```ts

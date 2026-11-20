@@ -7,7 +7,14 @@ export type { ValidationCode, ValidationError } from './validation.js';
 export { SCHEMA_VERSION, SurveyDefinition } from './definition.js';
 export type { AnswerMap, SurveyDefinitionInput, SurveyDefinitionJSON } from './definition.js';
 export { SurveySession } from './session.js';
-export type { SessionEvents, SessionJSON, SessionListener, SessionState } from './session.js';
+export type {
+  SessionEvents,
+  SessionJSON,
+  SessionListener,
+  SessionOptions,
+  SessionState,
+  TimelineEvent,
+} from './session.js';
 // eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for 2.x callers until 4.0
 export { Survey } from './survey.js';
 export type { SurveyInput } from './survey.js';
@@ -39,3 +46,7 @@ export {
   v,
 } from './builder.js';
 export type { QuestionOptions } from './builder.js';
+export { aggregate, timeOnQuestions } from './analytics.js';
+export type { QuestionStats, SurveyStats } from './analytics.js';
+export { migrateSession } from './versioning.js';
+export type { MigrationReport } from './versioning.js';

@@ -51,7 +51,7 @@ Grouped by the goal's verbs. Scope: **S** is about a day, **M** a few days, **L*
 | R2 | ✅ Built (2.2). **Condition language: JsonLogic** via `json-logic-js` (core's first runtime dependency). Data: `answer`, `answers.<id>`, `context.<key>`. Extra operators: `answered`, `matches`. YAML authoring in the `survey-skipper-yaml` package. Not yet: a `skipped` operator. | M |
 | R3 | ✅ Built (2.2). **Context.** `context` on the survey, readable as `context.*`, replaceable mid-survey with `setContext()`. | S |
 | R4 | ✅ Built (3.0). **Display conditions.** `showIf` and `skipIf`; routed-past questions keep their rules. The first question is checked lazily when the session is first read. | S |
-| R5 | **Computed variables and scoring.** Named expressions (`score = sum of answers in section A`) usable in conditions, piping and results. | M |
+| R5 | ✅ Built (3.4). **Computed variables.** `variables` on the definition, readable as `vars.*` in conditions and piped text; `getVariables()`. | M |
 | R6 | ✅ Built (2.2). **End states.** `{ end: 'qualified' }` rules finish the survey and set `survey.ending`. | S |
 
 ### Create (authoring)
@@ -69,7 +69,7 @@ Grouped by the goal's verbs. Scope: **S** is about a day, **M** a few days, **L*
 | ID | Feature | Scope |
 | --- | --- | --- |
 | M1 | ✅ Built (3.3). **Static analysis / lint.** `lintDefinition()`: duplicate ids, rule shape, unknown targets, unreachable rules and questions, unknown references, invalid regexes, choice questions without options. | M |
-| M2 | **Versioning.** Definitions carry a version; sessions record which version they ran against; a helper maps answers across versions by question id. | M |
+| M2 | ✅ Built (3.4). **Versioning.** Definitions carry `version`, sessions record it, and `migrateSession()` moves saved sessions to a new definition with a report. | M |
 | M3 | ✅ Built (3.3). **Path simulation.** `simulatePaths()` lists structural routes; `runScript()` runs scripted answers through a real session. | M |
 
 ### Track
@@ -77,8 +77,8 @@ Grouped by the goal's verbs. Scope: **S** is about a day, **M** a few days, **L*
 | ID | Feature | Scope |
 | --- | --- | --- |
 | T1 | ✅ Built (3.2). **Events.** `session.on()` for `answer`, `invalid`, `navigate`, `back`, `complete`; returns an unsubscribe function. | S |
-| T2 | **Response timeline.** Session keeps timestamped events (shown, answered, changed, skipped), so time-per-question and edits are recoverable. | S |
-| T3 | **Aggregation helpers.** Given many sessions: answer distributions, completion and drop-off per question, path frequency (which branches people actually take). Pure functions over session JSON. | M |
+| T2 | ✅ Built (3.4). **Response timeline.** `session.timeline` with `shown`, `answered`, `changed`, `skipped`, `back`, `complete` and ISO timestamps, saved with the session; injectable clock; `timeOnQuestions()`. | S |
+| T3 | ✅ Built (3.4). **Aggregation helpers.** `aggregate()` over sessions or saved JSON: completion, endings, per-question shown/answered/drop-off and distributions, route frequency. | M |
 
 ### Share
 

@@ -1,7 +1,7 @@
 import { Answer, type AnswerInput, type AnswerValue } from './answer.js';
 import { SCHEMA_VERSION, SurveyDefinition, type SurveyDefinitionInput } from './definition.js';
 import type { Question, QuestionId } from './question.js';
-import { evaluate, type RuleData } from './rules.js';
+import { compute, evaluate, type RuleData } from './rules.js';
 import { validateAnswer, type ValidationError } from './validation.js';
 
 /** Events a session emits, with the payload each listener receives. */
@@ -47,6 +47,27 @@ export interface SessionState {
   context?: Record<string, unknown>;
   /** The named ending the session finished on, if any. */
   ending?: string;
+  /** What happened so far, oldest first. */
+  timeline?: TimelineEvent[];
+}
+
+/** Something that happened in a session, with when it happened. */
+export interface TimelineEvent {
+  type: 'shown' | 'answered' | 'changed' | 'skipped' | 'back' | 'complete';
+  /** The question involved, for every type except `complete`. */
+  questionId?: QuestionId;
+  /** The stored value, for `answered` and `changed`. */
+  value?: AnswerValue | null;
+  /** The named ending, for `complete`. */
+  ending?: string;
+  /** ISO 8601 timestamp. */
+  at: string;
+}
+
+/** Options that are not part of a session's saved state. */
+export interface SessionOptions {
+  /** The clock used for timeline timestamps. Defaults to the system clock. */
+  now?: () => Date;
 }
 
 /** What {@link SurveySession.toJSON} returns. */
@@ -58,6 +79,7 @@ export interface SessionJSON extends SessionState {
   forward: QuestionId[];
   finished: boolean;
   context: Record<string, unknown>;
+  timeline: TimelineEvent[];
 }
 
 /**
@@ -91,9 +113,15 @@ export class SurveySession {
    * waits until the session is first read, so context set after construction still counts.
    */
   private settled: boolean;
+  /**
+   * What happened so far, oldest first: questions shown, answered, changed or routed past, steps back, and completion.
+   * Saved with the session.
+   */
+  timeline: TimelineEvent[];
+  private readonly now: () => Date;
   private readonly listeners = new Map<keyof SessionEvents, Set<(event: never) => void>>();
 
-  constructor(definition: SurveyDefinition | SurveyDefinitionInput, state: SessionState = {}) {
+  constructor(definition: SurveyDefinition | SurveyDefinitionInput, state: SessionState = {}, options: SessionOptions = {}) {
     if (!isNil(state.schemaVersion) && state.schemaVersion > SCHEMA_VERSION) {
       throw new RangeError(
         `Session schema version ${String(state.schemaVersion)} is newer than this library supports (${String(SCHEMA_VERSION)})`,
@@ -106,6 +134,8 @@ export class SurveySession {
     this.forward = [...(state.forward ?? [])];
     this.context = { ...state.context };
     this.ending = state.ending;
+    this.timeline = (state.timeline ?? []).map((event) => ({ ...event }));
+    this.now = options.now ?? (() => new Date());
     if (state.finished) {
       this.index = this.questions.length;
     } else if (!isNil(state.currentQuestionId)) {
@@ -218,7 +248,16 @@ export class SurveySession {
       }
     }
     const own = question ? answers[String(question.id)] : undefined;
-    return { answers, context: this.context, answer: own ?? null };
+    const data: RuleData = { answers, context: this.context, answer: own ?? null, vars: {} };
+    for (const [name, expression] of Object.entries(this.definition.variables)) {
+      data.vars[name] = compute(expression, data);
+    }
+    return data;
+  }
+
+  /** The definition's computed variables, evaluated against the current answers and context. */
+  getVariables(): Record<string, unknown> {
+    return this.getRuleData(null).vars;
   }
 
   /**
@@ -277,7 +316,13 @@ export class SurveySession {
     if (q) {
       const key = String(q.id);
       const stored = Answer.from(answer);
+      const previous = this.answers[key];
       this.answers[key] = stored;
+      this.record({
+        type: previous?.isValid() ? 'changed' : 'answered',
+        questionId: q.id,
+        value: stored.value ?? null,
+      });
       Reflect.deleteProperty(this.abandonedAnswers, key);
       this.emit('answer', { question: q, answer: stored });
     }
@@ -298,6 +343,11 @@ export class SurveySession {
     const next = this.advance(start);
     this.reconcileForward(next);
     if (start) {
+      if (next) {
+        this.record({ type: 'shown', questionId: next.id });
+      } else {
+        this.record({ type: 'complete', ...(this.ending === undefined ? {} : { ending: this.ending }) });
+      }
       this.emit('navigate', { from: start, to: next });
       if (!next) {
         this.emit('complete', { ending: this.ending });
@@ -355,6 +405,7 @@ export class SurveySession {
     this.ending = undefined;
     const to = this.getQuestion(previousId);
     if (to) {
+      this.record({ type: 'back', questionId: to.id });
       this.emit('back', { from: current, to });
     }
     return to;
@@ -383,6 +434,7 @@ export class SurveySession {
       currentQuestionId: current?.id,
       finished: !current,
       context: this.context,
+      timeline: this.timeline,
       ending: this.ending,
     };
   }
@@ -401,7 +453,12 @@ export class SurveySession {
     this.settled = true;
     const first = this.questions[this.index];
     if (first && (!this.isShown(first) || this.isPreAnswered(first))) {
+      this.record({ type: 'skipped', questionId: first.id });
       this.advance(first);
+    }
+    const current = this.questions[this.index];
+    if (current) {
+      this.record({ type: 'shown', questionId: current.id });
     }
   }
 
@@ -426,8 +483,13 @@ export class SurveySession {
       if (this.isShown(q) && !this.isPreAnswered(q)) {
         return q;
       }
+      this.record({ type: 'skipped', questionId: q.id });
     }
     return null;
+  }
+
+  private record(event: Omit<TimelineEvent, 'at'>): void {
+    this.timeline.push({ ...event, at: this.now().toISOString() });
   }
 
   /** A question with a valid answer the respondent has not been shown yet is routed past. */
