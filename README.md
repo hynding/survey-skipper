@@ -9,8 +9,9 @@ This is a pnpm workspace. Packages:
 | [`survey-skipper`](packages/core) | `packages/core` | The core library: survey definitions and respondent sessions, JsonLogic branching rules, context, Back navigation. Framework-agnostic, published to npm. |
 | [`survey-skipper-yaml`](packages/yaml) | `packages/yaml` | Write survey definitions and their rules in YAML. |
 | [`survey-skipper-react`](packages/react) | `packages/react` | React bindings: a `useSurvey()` hook that runs a session in a component. |
+| [`survey-skipper-server`](apps/server) | `apps/server` | HTTP API for definitions, sessions, responses and stats, over any `SurveyStore`. |
 
-Planned apps (a survey service and web apps) are listed in the
+Planned web apps are listed in the
 [roadmap](docs/ROADMAP.md). Libraries go in `packages/`, runnable apps in `apps/`.
 
 ## Development
