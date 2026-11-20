@@ -3,6 +3,24 @@ import { SCHEMA_VERSION, SurveyDefinition, type SurveyDefinitionInput } from './
 import type { Question, QuestionId } from './question';
 import { evaluate, type RuleData } from './rules';
 import { validateAnswer, type ValidationError } from './validation';
+
+/** Events a session emits, with the payload each listener receives. */
+export interface SessionEvents {
+  /** An answer was stored. */
+  answer: { question: Question; answer: Answer };
+  /** `session.answer()` rejected an answer. */
+  invalid: { question: Question; errors: ValidationError[] };
+  /** The session moved forward. `to` is `null` when it finished. */
+  navigate: { from: Question | null; to: Question | null };
+  /** The session went back. */
+  back: { from: Question | null; to: Question };
+  /** The session finished, on a named ending or by running past the last question. */
+  complete: { ending: string | undefined };
+}
+
+export type SessionListener<K extends keyof SessionEvents> = (event: SessionEvents[K]) => void;
+
+const TEMPLATE = /\{\{\s*([^{}\s]+)\s*\}\}/g;
 import { isNil } from './utils';
 
 /** A respondent's progress through a survey. Restores a {@link SurveySession}; {@link SurveySession.toJSON} produces it. */
@@ -73,6 +91,7 @@ export class SurveySession {
    * waits until the session is first read, so context set after construction still counts.
    */
   private settled: boolean;
+  private readonly listeners = new Map<keyof SessionEvents, Set<(event: never) => void>>();
 
   constructor(definition: SurveyDefinition | SurveyDefinitionInput, state: SessionState = {}) {
     if (!isNil(state.schemaVersion) && state.schemaVersion > SCHEMA_VERSION) {
@@ -94,6 +113,89 @@ export class SurveySession {
     }
     this.settled =
       !!state.finished || !isNil(state.currentQuestionId) || this.history.length > 0 || this.forward.length > 0;
+  }
+
+  /** Listens for a session event. Returns a function that removes the listener. */
+  on<K extends keyof SessionEvents>(event: K, listener: SessionListener<K>): () => void {
+    let set = this.listeners.get(event);
+    if (!set) {
+      set = new Set();
+      this.listeners.set(event, set);
+    }
+    set.add(listener);
+    return () => {
+      set.delete(listener);
+    };
+  }
+
+  /**
+   * Fills `{{path}}` placeholders in `template` from the rule data: `{{answers.q1}}`, `{{context.name}}`, or
+   * `{{answer}}` for `question`'s own answer. Lists are joined with `, `; missing values become empty text.
+   */
+  renderText(template: string, question?: Question | null): string {
+    const data = this.getRuleData(question ?? this.getQuestion());
+    return template.replace(TEMPLATE, (_match, path: string) => formatValue(lookup(data, path)));
+  }
+
+  /** The question's text with placeholders filled in. Defaults to the current question. */
+  getQuestionText(question?: Question | null): string {
+    const q = question ?? this.getQuestion();
+    return q?.text === undefined ? '' : this.renderText(q.text, q);
+  }
+
+  /**
+   * The current page: the current question, then the following questions in the same `section` along the route
+   * the current answers lead to, leaving out hidden ones. Questions without a section are a page of their own.
+   * Call it again after each answer, because answers can change which questions the page holds.
+   */
+  getPage(): Question[] {
+    const first = this.getQuestion();
+    if (!first) {
+      return [];
+    }
+    const page = [first];
+    if (first.section === undefined) {
+      return page;
+    }
+    const seen = new Set<number>([this.index]);
+    let index = this.index;
+    let q: Question = first;
+    for (;;) {
+      const route = this.routeFrom(q, index);
+      if (route.ending !== undefined || seen.has(route.index)) {
+        break;
+      }
+      index = route.index;
+      seen.add(index);
+      const nextQuestion = this.questions[index];
+      if (!nextQuestion || nextQuestion.section !== first.section) {
+        break;
+      }
+      q = nextQuestion;
+      if (this.isShown(q)) {
+        page.push(q);
+      }
+    }
+    return page;
+  }
+
+  /**
+   * Moves past the current page and returns the next one, or `null` when the session is finished. Answer the page's
+   * questions first (with `answer()` or `setAnswer(answer, question)`). Going back from the new page returns to the
+   * first question of this one.
+   */
+  nextPage(): Question[] | null {
+    const start = this.getQuestion();
+    if (!start) {
+      return null;
+    }
+    const historyLength = this.history.length;
+    let next = this.getNextQuestion();
+    while (next && start.section !== undefined && next.section === start.section) {
+      next = this.getNextQuestion();
+    }
+    this.history.splice(historyLength + 1);
+    return next ? this.getPage() : null;
   }
 
   /** The definition's questions. */
@@ -156,6 +258,8 @@ export class SurveySession {
     const errors = validateAnswer(target, answer);
     if (errors.length === 0) {
       this.setAnswer(answer, target);
+    } else {
+      this.emit('invalid', { question: target, errors });
     }
     return { ok: errors.length === 0, errors };
   }
@@ -172,8 +276,10 @@ export class SurveySession {
     const q = futureQuestion ?? this.getQuestion();
     if (q) {
       const key = String(q.id);
-      this.answers[key] = Answer.from(answer);
+      const stored = Answer.from(answer);
+      this.answers[key] = stored;
       Reflect.deleteProperty(this.abandonedAnswers, key);
+      this.emit('answer', { question: q, answer: stored });
     }
     return this;
   }
@@ -191,6 +297,12 @@ export class SurveySession {
     }
     const next = this.advance(start);
     this.reconcileForward(next);
+    if (start) {
+      this.emit('navigate', { from: start, to: next });
+      if (!next) {
+        this.emit('complete', { ending: this.ending });
+      }
+    }
     return next;
   }
 
@@ -241,7 +353,11 @@ export class SurveySession {
       this.forward.push(current.id);
     }
     this.ending = undefined;
-    return this.getQuestion(previousId);
+    const to = this.getQuestion(previousId);
+    if (to) {
+      this.emit('back', { from: current, to });
+    }
+    return to;
   }
 
   /** The questions shown so far, in order, ending with the current question if there is one. */
@@ -271,6 +387,13 @@ export class SurveySession {
     };
   }
 
+  private emit<K extends keyof SessionEvents>(event: K, payload: SessionEvents[K]): void {
+    const set = this.listeners.get(event) as Set<SessionListener<K>> | undefined;
+    set?.forEach((listener) => {
+      listener(payload);
+    });
+  }
+
   private settle(): void {
     if (this.settled) {
       return;
@@ -291,7 +414,11 @@ export class SurveySession {
         return null;
       }
       visited.add(this.index);
-      this.index = this.nextIndexFrom(q);
+      const route = this.routeFrom(q, this.index);
+      if (route.ending !== undefined) {
+        this.ending = route.ending;
+      }
+      this.index = route.index;
       q = this.questions[this.index] ?? null;
       if (!q) {
         return null;
@@ -338,7 +465,7 @@ export class SurveySession {
    * Where to go after `q`: the first matching rule (rules with an unknown target are ignored), then the answer map,
    * then the next question in order. An `end` rule moves past the last question and records the ending.
    */
-  private nextIndexFrom(q: Question): number {
+  private routeFrom(q: Question, index: number): { index: number; ending?: string } {
     if (q.rules.length > 0) {
       const data = this.getRuleData(q);
       for (const rule of q.rules) {
@@ -346,12 +473,11 @@ export class SurveySession {
           continue;
         }
         if (typeof rule.end === 'string' && rule.end.length > 0) {
-          this.ending = rule.end;
-          return this.questions.length;
+          return { index: this.questions.length, ending: rule.end };
         }
         const target = isNil(rule.goTo) ? undefined : this.definition.indexOf(rule.goTo);
         if (target !== undefined) {
-          return target;
+          return { index: target };
         }
       }
     }
@@ -360,10 +486,34 @@ export class SurveySession {
       ? this.definition.answerMap[String(q.id)]?.[this.definition.getAnswerKey(answer)]
       : undefined;
     const target = targetId === undefined ? undefined : this.definition.indexOf(targetId);
-    return target ?? this.index + 1;
+    return { index: target ?? index + 1 };
   }
 }
 
 function wrapAnswers(answers: Record<string, Answer | AnswerInput> | undefined): Record<string, Answer> {
   return Object.fromEntries(Object.entries(answers ?? {}).map(([id, answer]) => [id, Answer.from(answer)]));
+}
+
+function lookup(data: unknown, path: string): unknown {
+  let value: unknown = data;
+  for (const part of path.split('.')) {
+    if (value === null || typeof value !== 'object') {
+      return undefined;
+    }
+    value = (value as Record<string, unknown>)[part];
+  }
+  return value;
+}
+
+function formatValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  if (Array.isArray(value)) {
+    return value.map(formatValue).join(', ');
+  }
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  return JSON.stringify(value);
 }

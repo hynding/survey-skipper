@@ -60,8 +60,8 @@ Grouped by the goal's verbs. Scope: **S** is about a day, **M** a few days, **L*
 | --- | --- | --- |
 | A1 | ✅ Built (3.1). **Question types.** `single`, `multi`, `text`, `number`, `rating`, `date`, `boolean`. | M |
 | A2 | ✅ Built (3.1). **Validation.** `required`, `min`/`max`, `minLength`/`maxLength`, `pattern`, `minSelected`/`maxSelected`. `session.answer()` returns errors and doesn't store invalid answers; `validate()` and `validateAnswer()` check without storing. Custom validators arrive with E1. | M |
-| A3 | **Sections / pages.** Group questions; `getNextPage()` evaluates branching inside the page so batches are correct (replaces `getNextQuestions(n)`). | M |
-| A4 | **Piping.** Templates in question text: `"How long have you owned your {{answers.make}}?"`, resolved per session. | S |
+| A3 | ✅ Built (3.2). **Sections / pages.** Questions take a `section`; `getPage()` follows the route the current answers lead to inside the section, and `nextPage()` moves past it. | M |
+| A4 | ✅ Built (3.2). **Piping.** `{{answers.x}}`, `{{context.x}}`, `{{answer}}` in question text via `getQuestionText()` / `renderText()`. | S |
 | A5 | **Fluent builder.** `survey('id').question('car', q => q.single(['yes','no'])).when(eq('car','no')).goTo('commute')` with full type inference. | M |
 
 ### Manage
@@ -76,7 +76,7 @@ Grouped by the goal's verbs. Scope: **S** is about a day, **M** a few days, **L*
 
 | ID | Feature | Scope |
 | --- | --- | --- |
-| T1 | **Events.** `onAnswer`, `onNavigate`, `onBack`, `onComplete`, `onValidationError` on the session; plain listener API, no dependency. | S |
+| T1 | ✅ Built (3.2). **Events.** `session.on()` for `answer`, `invalid`, `navigate`, `back`, `complete`; returns an unsubscribe function. | S |
 | T2 | **Response timeline.** Session keeps timestamped events (shown, answered, changed, skipped), so time-per-question and edits are recoverable. | S |
 | T3 | **Aggregation helpers.** Given many sessions: answer distributions, completion and drop-off per question, path frequency (which branches people actually take). Pure functions over session JSON. | M |
 
