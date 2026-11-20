@@ -1,12 +1,13 @@
-import { Answer, Question, Survey, type AnswerMap } from '../../src';
+import { Answer, Question, SurveyDefinition, SurveySession, type AnswerMap } from '../../src';
 
 const questionPrefix = 'q';
 
-export function getNewSurvey(numQuestions: number, answers: string[], map: AnswerMap = {}): Survey {
-  return new Survey({
+export function getNewSurvey(numQuestions: number, answers: string[], map: AnswerMap = {}): SurveySession {
+  const definition = new SurveyDefinition({
     questions: getNewQuestions(numQuestions, answers),
     answerMap: map,
   });
+  return new SurveySession(definition);
 }
 
 export function getNewQuestions(count: number, answers: string[]): Question[] {

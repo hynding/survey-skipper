@@ -1,6 +1,6 @@
 # survey-skipper-yaml
 
-Write [survey-skipper](../core) surveys, including their JsonLogic rules, in YAML.
+Write [survey-skipper](../core) survey definitions, including their JsonLogic rules, in YAML.
 
 ```sh
 npm install survey-skipper survey-skipper-yaml
@@ -31,14 +31,16 @@ questions:
 
 ```ts
 import { readFileSync } from 'node:fs';
+import { SurveySession } from 'survey-skipper';
 import { loadSurvey, stringifySurvey } from 'survey-skipper-yaml';
 
-const survey = loadSurvey(readFileSync('commute.yaml', 'utf8'));
-survey.setContext({ employed: true });
+const definition = loadSurvey(readFileSync('commute.yaml', 'utf8'));
+const session = new SurveySession(definition, { context: { employed: true } });
 
-stringifySurvey(survey); // the definition back as YAML, without answers, history or context
+stringifySurvey(definition); // back to YAML; given a session, writes its definition only
 ```
 
-- `parseSurvey(text)` returns the plain `SurveyInput`; `loadSurvey(text)` returns a `Survey`.
+- `parseSurvey(text)` returns the plain `SurveyDefinitionInput`; `loadSurvey(text)` returns a `SurveyDefinition`.
+- 0.2.0 needs `survey-skipper` 3.x. In 0.1.0, `loadSurvey` returned a `Survey`.
 - Both throw a `TypeError` if the document is not a mapping with a `questions` list.
 - Quote the `"!"` operator, which YAML would read as a tag. Other operators can be left bare.

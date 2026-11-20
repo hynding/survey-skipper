@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import { Given, Then, When } from '@cucumber/cucumber';
-import { Survey, type Question, type SurveyInput } from '../../src';
+import {
+  SurveyDefinition,
+  SurveySession,
+  type Question,
+  type SessionState,
+  type SurveyDefinitionInput,
+} from '../../src';
 import type { SurveyWorld } from '../support/world';
 
 function byId(world: SurveyWorld, id: string): Question {
@@ -20,7 +26,7 @@ function capture(world: SurveyWorld, fn: () => unknown): void {
 }
 
 Given('a survey defined as:', function (this: SurveyWorld, json: string) {
-  this.survey = new Survey(JSON.parse(json) as SurveyInput);
+  this.survey = new SurveySession(new SurveyDefinition(JSON.parse(json) as SurveyDefinitionInput));
 });
 
 Given('the context is:', function (this: SurveyWorld, json: string) {
@@ -34,36 +40,29 @@ Given('I answer {string} with {string}', function (this: SurveyWorld, id: string
 Given(
   'answer {string} on {string} maps to {string} in the answer map',
   function (this: SurveyWorld, value: string, from: string, to: string) {
-    this.currentSurvey.answerMap[from] = { [value]: to };
+    this.currentSurvey.definition.answerMap[from] = { [value]: to };
   },
 );
 
 Given(
   'I add a rule to {string} that goes to {string} when the answer is {string}',
   function (this: SurveyWorld, id: string, to: string, value: string) {
-    this.currentSurvey.addRule(byId(this, id), { if: { '==': [{ var: 'answer' }, value] }, goTo: to });
+    this.currentSurvey.definition.addRule(byId(this, id), { if: { '==': [{ var: 'answer' }, value] }, goTo: to });
   },
 );
 
 When('I add a rule to {string} with both goTo and end', function (this: SurveyWorld, id: string) {
-  capture(this, () => this.currentSurvey.addRule(byId(this, id), { goTo: 'done', end: 'finished' }));
+  capture(this, () => this.currentSurvey.definition.addRule(byId(this, id), { goTo: 'done', end: 'finished' }));
 });
 
 When('I add a rule to {string} that goes to {string}', function (this: SurveyWorld, id: string, to: string) {
-  capture(this, () => this.currentSurvey.addRule(byId(this, id), { goTo: to }));
+  capture(this, () => this.currentSurvey.definition.addRule(byId(this, id), { goTo: to }));
 });
 
 When('the whole survey is saved to JSON and restored', function (this: SurveyWorld) {
-  const survey = this.currentSurvey;
-  const saved = JSON.stringify({
-    questions: survey.questions,
-    answers: survey.answers,
-    context: survey.context,
-    ending: survey.ending,
-    history: survey.history,
-    currentQuestionId: survey.getQuestion()?.id,
-  });
-  this.survey = new Survey(JSON.parse(saved) as SurveyInput);
+  const definition = JSON.parse(JSON.stringify(this.currentSurvey.definition)) as SurveyDefinitionInput;
+  const state = JSON.parse(JSON.stringify(this.currentSurvey)) as SessionState;
+  this.survey = new SurveySession(new SurveyDefinition(definition), state);
 });
 
 Then('the next question is {string}', function (this: SurveyWorld, id: string) {

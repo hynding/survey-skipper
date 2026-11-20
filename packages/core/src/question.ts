@@ -13,6 +13,8 @@ export interface QuestionInput {
   rules?: Rule[];
   /** When set, the question is only asked if this condition holds; otherwise the survey routes past it. */
   showIf?: Condition;
+  /** When set, the question is routed past without being asked if this condition holds. */
+  skipIf?: Condition;
 }
 
 export class Question {
@@ -21,8 +23,9 @@ export class Question {
   answers: Answer[];
   rules: Rule[];
   showIf: Condition | undefined;
+  skipIf: Condition | undefined;
 
-  constructor({ id, text, answers = [], rules = [], showIf }: QuestionInput) {
+  constructor({ id, text, answers = [], rules = [], showIf, skipIf }: QuestionInput) {
     if (isNil(id)) {
       throw new TypeError('Question requires an id');
     }
@@ -31,5 +34,11 @@ export class Question {
     this.answers = answers.map((answer) => Answer.from(answer));
     this.rules = rules.map((rule) => ({ ...rule }));
     this.showIf = showIf;
+    this.skipIf = skipIf;
+  }
+
+  /** Wraps a plain object (e.g. deserialized JSON) in a Question; passes Questions through. */
+  static from(input: Question | QuestionInput): Question {
+    return input instanceof Question ? input : new Question(input);
   }
 }

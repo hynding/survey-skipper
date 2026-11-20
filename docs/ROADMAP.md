@@ -1,7 +1,7 @@
 # Survey Skipper roadmap
 
-Status: decisions answered on 2026-11-20 (see section 5). **Built: C2 (Back navigation), P1 (pnpm monorepo), R1, R2, R3,
-R4 and R6 (JsonLogic rules, context, showIf, named endings, YAML package).** Other items are still proposals.
+Status: decisions answered on 2026-11-20 (see section 5). **Built: C1 and C3 (3.0 definition/session split with
+`toJSON` and schema versions), C2 (Back navigation), P1 (pnpm monorepo), R1, R2, R3, R4 and R6 (JsonLogic rules, context, showIf/skipIf, named endings, YAML package).** Other items are still proposals.
 
 Goal of the project: **create, manage, track, share and extend customizable surveys whose path branches on rules and
 context.** This plan maps that goal onto the library as it stands at v2.0.0 (strict TypeScript, PR #1).
@@ -38,9 +38,9 @@ Grouped by the goal's verbs. Scope: **S** is about a day, **M** a few days, **L*
 
 | ID | Feature | Scope |
 | --- | --- | --- |
-| C1 | **Split definition from session.** `SurveyDefinition` (immutable: questions, rules, metadata, version) and `SurveySession` (one respondent: answers, context, cursor, history). Keep `Survey` as a thin compatibility wrapper for one 2.x minor, then remove in 3.0. | L |
+| C1 | ✅ Built (3.0). **Split definition from session.** `SurveyDefinition` (questions, rules, answer map, settings, `version`) and `SurveySession` (answers, context, position, history, ending). `Survey` remains as a deprecated wrapper until 4.0. | L |
 | C2 | **Navigation history.** ✅ Built. `history`, `back()`, `canGoBack()`, `getPath()`. Changing an earlier answer moves answers on the abandoned route to `abandonedAnswers` (default) or discards them (`keepAbandonedAnswers: false`). Still to do: `goTo(id)` that respects reachability. | M |
-| C3 | **Serialization.** `toJSON()` / `fromJSON()` for both definition and session, with a `schemaVersion` field and a migration hook. | S |
+| C3 | ✅ Built (3.0). **Serialization.** `toJSON()` on both classes with `schemaVersion` (1); constructors restore from it and reject newer schemas. Sessions record `definitionId` / `definitionVersion`. Not yet: migrations between schema versions. | S |
 | C4 | **Typed answer values.** Preserve `string | number | boolean | string[] | null` instead of stringifying; answer keys stop colliding. | S |
 
 ### Branching rules and context
@@ -50,7 +50,7 @@ Grouped by the goal's verbs. Scope: **S** is about a day, **M** a few days, **L*
 | R1 | ✅ Built (2.2). **Rule engine.** Ordered `rules` on each question: `{ if?, goTo }` or `{ if?, end }`, first match wins; the `answerMap` still applies after rules, then the next question. Rules live on the current `Survey`; they move to `SurveyDefinition` with C1. | M |
 | R2 | ✅ Built (2.2). **Condition language: JsonLogic** via `json-logic-js` (core's first runtime dependency). Data: `answer`, `answers.<id>`, `context.<key>`. Extra operators: `answered`, `matches`. YAML authoring in the `survey-skipper-yaml` package. Not yet: a `skipped` operator. | M |
 | R3 | ✅ Built (2.2). **Context.** `context` on the survey, readable as `context.*`, replaceable mid-survey with `setContext()`. | S |
-| R4 | ✅ Built (2.2) as `showIf`. **Display conditions.** A hidden question is routed past without being asked. Not yet: `skipIf`, and `showIf` on the first question. | S |
+| R4 | ✅ Built (3.0). **Display conditions.** `showIf` and `skipIf`; routed-past questions keep their rules. The first question is checked lazily when the session is first read. | S |
 | R5 | **Computed variables and scoring.** Named expressions (`score = sum of answers in section A`) usable in conditions, piping and results. | M |
 | R6 | ✅ Built (2.2). **End states.** `{ end: 'qualified' }` rules finish the survey and set `survey.ending`. | S |
 

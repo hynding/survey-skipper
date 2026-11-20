@@ -6,8 +6,8 @@ This is a pnpm workspace. Packages:
 
 | Package | Path | What it is |
 | --- | --- | --- |
-| [`survey-skipper`](packages/core) | `packages/core` | The core library: questions, answers, JsonLogic branching rules, context, Back navigation. Framework-agnostic, published to npm. |
-| [`survey-skipper-yaml`](packages/yaml) | `packages/yaml` | Write surveys and their rules in YAML. |
+| [`survey-skipper`](packages/core) | `packages/core` | The core library: survey definitions and respondent sessions, JsonLogic branching rules, context, Back navigation. Framework-agnostic, published to npm. |
+| [`survey-skipper-yaml`](packages/yaml) | `packages/yaml` | Write survey definitions and their rules in YAML. |
 
 Planned packages (React bindings, a survey service and web apps) are listed in the
 [roadmap](docs/ROADMAP.md). Libraries go in `packages/`, runnable apps in `apps/`.

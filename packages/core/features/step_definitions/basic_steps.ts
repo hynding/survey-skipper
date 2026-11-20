@@ -15,7 +15,7 @@ Given(
   'question {int} answer {word} maps to question {int}',
   function (this: SurveyWorld, a: number, value: string, b: number) {
     const questionA = this.question(a);
-    this.currentSurvey.mapAnswer(questionA, findAnswer(questionA, value), this.question(b));
+    this.currentSurvey.definition.mapAnswer(questionA, findAnswer(questionA, value), this.question(b));
   },
 );
 

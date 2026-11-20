@@ -1,6 +1,6 @@
 # Survey Skipper
-A simple but smart survey system, agnostic of service implementation, to allow skipping questions based on predetermined
-answers.
+
+Customizable surveys whose path branches on rules and context. Framework-agnostic: bring your own UI and storage.
 
 Written in TypeScript and published as CommonJS with type declarations.
 
@@ -12,51 +12,50 @@ npm install survey-skipper
 
 ## Usage
 
-```ts
-import { Answer, Question, Survey } from 'survey-skipper';
-
-const yes = () => new Answer({ value: 'yes' });
-const no = () => new Answer({ value: 'no' });
-
-const q1 = new Question({ id: 'q1', text: 'Do you own a car?', answers: [yes(), no()] });
-const q2 = new Question({ id: 'q2', text: 'What make is it?', answers: [new Answer({ isCustom: true })] });
-const q3 = new Question({ id: 'q3', text: 'How do you get to work?', answers: [yes(), no()] });
-
-const survey = new Survey({ questions: [q1, q2, q3] });
-
-// Answering "no" to q1 skips straight to q3.
-survey.mapAnswer(q1, q1.answers[1]!, q3);
-
-survey.setAnswer(new Answer({ value: 'no' }));
-survey.getNextQuestion(); // => q3
-```
-
-### Rules and context
-
-Questions can carry ordered branching rules written in [JsonLogic](https://jsonlogic.com). When the survey leaves a
-question, the first rule whose `if` holds decides where to go: `goTo` a question, or `end` the survey with a named
-ending. A rule without `if` always matches. If no rule matches, the answer map applies, then the next question in order.
+A **`SurveyDefinition`** is the survey as its creator writes it: questions, answer options, rules and settings. A
+**`SurveySession`** is one respondent working through it: their answers, context, position and history. Any number of
+sessions can share one definition.
 
 ```ts
-const survey = new Survey({
-  context: { role: 'manager' },
+import { SurveyDefinition, SurveySession } from 'survey-skipper';
+
+const definition = new SurveyDefinition({
+  id: 'commute',
+  version: 1,
   questions: [
     {
       id: 'age',
+      text: 'How old are you?',
       rules: [
         { if: { '<': [{ var: 'answer' }, 18] }, end: 'too_young' },
         { if: { '>=': [{ var: 'answer' }, 65] }, goTo: 'retired' },
       ],
     },
-    { id: 'team', showIf: { '==': [{ var: 'context.role' }, 'manager'] } },
-    { id: 'retired' },
+    { id: 'team', text: 'How big is your team?', showIf: { '==': [{ var: 'context.role' }, 'manager'] } },
+    { id: 'commute', text: 'How do you get to work?', answers: [{ value: 'car' }, { value: 'bike' }] },
+    { id: 'retired', text: 'How long have you been retired?' },
   ],
 });
 
-survey.setAnswer({ value: 12 });
-survey.getNextQuestion(); // => null
-survey.ending;            // => 'too_young'
+const session = new SurveySession(definition);
+session.setContext({ role: 'engineer' });
+
+session.getQuestion();          // => age
+session.setAnswer({ value: 30 });
+session.getNextQuestion();      // => commute ('team' is hidden for non-managers)
+session.back();                 // => age, with its answer kept
+
+session.setAnswer({ value: 12 });
+session.getNextQuestion();      // => null
+session.ending;                 // => 'too_young'
 ```
+
+### Rules and context
+
+Each question can carry ordered branching rules written in [JsonLogic](https://jsonlogic.com). When the session leaves
+a question, the first rule whose `if` holds decides where to go: `goTo` a question, or `end` the survey with a named
+ending (`session.ending`). A rule without `if` always matches. If no rule matches, the definition's answer map applies,
+then the next question in order.
 
 Conditions are evaluated against:
 
@@ -64,45 +63,83 @@ Conditions are evaluated against:
 | --- | --- |
 | `answer` | The answer to the question being left, or `null`. |
 | `answers.<questionId>` | Any valid answer so far. Abandoned answers are not included. |
-| `context.<key>` | The survey's `context`. Change it any time with `setContext()`. |
+| `context.<key>` | The session's `context`. Change it any time with `setContext()`. |
 
 Beyond the standard JsonLogic operators, two are registered: `{ "answered": "q1" }` and
-`{ "matches": [value, "regex"] }`. These are added to the shared `json-logic-js` instance, so they are also visible to
-other code using that library.
+`{ "matches": [value, "regex"] }`. They are added to the shared `json-logic-js` instance, so other code using that
+library sees them too.
 
-- `showIf` hides a question when its condition fails: the survey routes past it (its rules still apply) without asking
-  it. The first question is always shown.
-- `addRule(question, rule)` adds a rule in code. It throws a `TypeError` unless the rule has exactly one of `goTo` or
-  `end`, and a `RangeError` for a question outside the survey. Rules loaded from JSON with an unknown `goTo` are
-  ignored.
+- `showIf` asks a question only when its condition holds; `skipIf` routes past it when its condition holds. A routed-past
+  question is not asked, but its own rules still decide where to go next. This includes the first question: it is
+  checked the first time the session is read, so context set before then counts.
+- `definition.addRule(question, rule)` adds a rule in code. It throws a `TypeError` unless the rule has exactly one of
+  `goTo` or `end`, and a `RangeError` for a question outside the survey. Rules loaded from JSON with an unknown `goTo`
+  are ignored.
 - Question ids are read as JsonLogic paths, so ids containing `.` cannot be referenced in `answers.<id>`.
-- To write surveys in YAML, use [`survey-skipper-yaml`](../yaml).
+- To write definitions in YAML, use [`survey-skipper-yaml`](../yaml).
 
-### Concepts
+### Going back
 
-- **Answer map**: `answerMap[fromQuestionId][answerKey] = toQuestionId`. The key is the answer's value, or the survey's
-  `customKey` (default `'*'`) for custom answers. Unmapped answers move on to the next question in order.
-- **Pre-answers**: `setAnswer(answer, futureQuestion)` answers a later question now. When the survey reaches it, it is
-  skipped, but its own mapping still decides where to go next.
-- **Batches**: `getNextQuestions(n)` returns up to `n` consecutive questions; `setAnswers(answers)` answers them in order.
-  Only the last answer's mapping affects what comes next.
-- **Going back**: `back()` returns to the previous question the respondent was shown (or `null` at the start;
-  check with `canGoBack()`). Answers are kept, so a UI can prefill them. Moving forward along the same route asks
-  those questions again rather than skipping them. If the respondent changes an answer and takes a different route,
-  answers on the route they left move from `answers` to `abandonedAnswers`, so they no longer route or skip but are not
-  lost. Pass `keepAbandonedAnswers: false` to discard them instead. `getPath()` lists the questions shown so far.
-- **Persistence**: a survey's `questions`, `answers` and `answerMap` can be saved as JSON and passed back to
-  `new Survey({...})`, along with `currentQuestionId`. Questions keep their `rules` and `showIf`. Save `history`,
-  `forward` and `abandonedAnswers` too to keep navigation state, and `context` and `ending` for rule state. Plain objects are turned back into `Question` / `Answer`
-  instances.
-- `getNextQuestion()` returns `null` when the survey is finished, including when pre-answered questions route in a
-  loop with nowhere left to go.
+`session.back()` returns to the previous question the respondent was shown (or `null` at the start; check with
+`canGoBack()`). Answers are kept, so a UI can prefill them. Moving forward along the same route asks those questions
+again rather than skipping them.
+
+If the respondent changes an answer and takes a different route, answers on the route they left move from `answers` to
+`abandonedAnswers`: they no longer route or skip, but are not lost. Set `keepAbandonedAnswers: false` on the definition
+to discard them instead. `getPath()` lists the questions shown so far.
+
+### Saving and restoring
+
+Both classes have `toJSON()`, so `JSON.stringify` works directly. Pass the parsed JSON back to the constructor:
+
+```ts
+const savedDefinition = JSON.stringify(definition);
+const savedSession = JSON.stringify(session);
+
+const restored = new SurveySession(new SurveyDefinition(JSON.parse(savedDefinition)), JSON.parse(savedSession));
+```
+
+Saved JSON carries `schemaVersion` (currently `SCHEMA_VERSION`, 1). Input from a newer schema is rejected with a
+`RangeError`. A saved session also records `definitionId` and `definitionVersion`, so you can tell which definition it
+ran against.
+
+### More
+
+- **Answer map**: the older, value-based way to branch: `definition.mapAnswer(fromQuestion, answer, toQuestion)` writes
+  `answerMap[fromQuestionId][answerKey] = toQuestionId`. The key is the answer's value, or the definition's `customKey`
+  (default `'*'`) for custom answers.
+- **Pre-answers**: `session.setAnswer(answer, laterQuestion)` answers a later question now. When the session reaches it,
+  it is routed past, but its own rules and mapping still decide where to go next.
+- **Batches**: `getNextQuestions(n)` returns up to `n` consecutive questions; `setAnswers(answers)` answers them in
+  order. Only the last answer's routing affects what comes next.
+- `getNextQuestion()` returns `null` when the session is finished, including when answered questions route in a loop
+  with nowhere left to go.
 
 ### Errors
 
 - `new Question({...})` throws a `TypeError` without an `id`.
 - `mapAnswer` throws a `TypeError` for an empty answer value, and a `RangeError` if the target question is not in the
   survey.
+- `addRule` throws as described above.
+- Constructors throw a `RangeError` for a `schemaVersion` newer than this library supports.
+
+## Upgrading from 2.x
+
+`Survey` still works in 3.0 but is deprecated and will be removed in 4.0. It is now a `SurveySession` that builds its
+own definition from the combined input. To migrate:
+
+| 2.x | 3.0 |
+| --- | --- |
+| `new Survey({ questions, answerMap, ...state })` | `new SurveySession(new SurveyDefinition({ questions, answerMap }), state)` |
+| `survey.mapAnswer(...)`, `survey.addRule(...)` | `definition.mapAnswer(...)`, `definition.addRule(...)` |
+| `survey.questions`, `survey.answerMap` | `definition.questions`, `definition.answerMap` (also `session.questions`) |
+| `new Survey({ keepAbandonedAnswers })` | `new SurveyDefinition({ keepAbandonedAnswers })` |
+| Saving selected fields by hand | `JSON.stringify(definition)` and `JSON.stringify(session)` |
+
+Behaviour changes, which apply to `Survey` too:
+
+- The first question is now checked like any other: if it is hidden by `showIf` / `skipIf`, or already answered before
+  the session is first read, the session starts at the next question.
 
 ## Development
 
