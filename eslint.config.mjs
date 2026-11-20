@@ -2,7 +2,7 @@ import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'coverage'] },
+  { ignores: ['**/dist', '**/node_modules', '**/coverage'] },
   eslint.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   {
@@ -15,7 +15,7 @@ export default tseslint.config(
     ...tseslint.configs.disableTypeChecked,
   },
   {
-    files: ['cucumber.js'],
+    files: ['**/cucumber.js'],
     languageOptions: { sourceType: 'commonjs', globals: { module: 'writable' } },
   },
 );
