@@ -27,6 +27,15 @@ importers:
         specifier: ^8.73.0
         version: 8.73.0(eslint@10.15.0)(typescript@6.0.3)
 
+  apps/server:
+    dependencies:
+      survey-skipper:
+        specifier: workspace:^
+        version: link:../../packages/core
+      survey-skipper-yaml:
+        specifier: workspace:^
+        version: link:../../packages/yaml
+
   packages/core:
     dependencies:
       json-logic-js:

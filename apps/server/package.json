@@ -1,0 +1,45 @@
+{
+  "name": "survey-skipper-server",
+  "version": "0.1.0",
+  "description": "HTTP API for survey-skipper definitions, sessions and responses",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "survey-skipper-server": "dist/main.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "dev": "tsx src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "node --import tsx --test test/*.test.ts",
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run build",
+    "prepack": "pnpm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hynding/survey-skipper.git",
+    "directory": "apps/server"
+  },
+  "author": "Steve Hynding",
+  "license": "MIT",
+  "dependencies": {
+    "survey-skipper": "workspace:^",
+    "survey-skipper-yaml": "workspace:^"
+  }
+}
