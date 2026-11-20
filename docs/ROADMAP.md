@@ -1,6 +1,7 @@
 # Survey Skipper roadmap
 
-Status: proposal, nothing here is built yet. Pick the items you want and each becomes its own PR.
+Status: decisions answered on 2026-11-20 (see section 5). **C2 (history and Back navigation) is built.** Other items
+are still proposals.
 
 Goal of the project: **create, manage, track, share and extend customizable surveys whose path branches on rules and
 context.** This plan maps that goal onto the library as it stands at v2.0.0 (strict TypeScript, PR #1).
@@ -38,7 +39,7 @@ Grouped by the goal's verbs. Scope: **S** is about a day, **M** a few days, **L*
 | ID | Feature | Scope |
 | --- | --- | --- |
 | C1 | **Split definition from session.** `SurveyDefinition` (immutable: questions, rules, metadata, version) and `SurveySession` (one respondent: answers, context, cursor, history). Keep `Survey` as a thin compatibility wrapper for one 2.x minor, then remove in 3.0. | L |
-| C2 | **Navigation history.** Session records the visited path; `back()`, `goTo(id)` that respects reachability, `canGoBack()`. Changing an earlier answer prunes answers on paths no longer reachable (configurable: prune or keep). | M |
+| C2 | **Navigation history.** ✅ Built. `history`, `back()`, `canGoBack()`, `getPath()`. Changing an earlier answer moves answers on the abandoned route to `abandonedAnswers` (default) or discards them (`keepAbandonedAnswers: false`). Still to do: `goTo(id)` that respects reachability. | M |
 | C3 | **Serialization.** `toJSON()` / `fromJSON()` for both definition and session, with a `schemaVersion` field and a migration hook. | S |
 | C4 | **Typed answer values.** Preserve `string | number | boolean | string[] | null` instead of stringifying; answer keys stop colliding. | S |
 
@@ -47,7 +48,7 @@ Grouped by the goal's verbs. Scope: **S** is about a day, **M** a few days, **L*
 | ID | Feature | Scope |
 | --- | --- | --- |
 | R1 | **Rule engine.** Ordered rules per question: `{ when: Condition, goTo: questionId | 'END' }`, first match wins, then a `default`. The current `answerMap` compiles into rules, so old surveys keep working. | M |
-| R2 | **Condition language** as plain JSON (shareable, storable): `eq`, `neq`, `in`, `notIn`, `gt/gte/lt/lte`, `between`, `contains`, `matches` (regex), `answered`, `skipped`, combined with `all` / `any` / `not`. Conditions can reference any earlier answer, not just the current question. | M |
+| R2 | **Condition language: JsonLogic**, authorable in JSON or YAML. Standard operators (`==`, `in`, `<`, `and`, `or`, `!`, `var`...) plus a few registered ones (`answered`, `skipped`, `matches`). Conditions read any answer via `{ "var": "answers.q1" }`. Uses `json-logic-js` (core's first runtime dependency); YAML parsing lives in a separate entry point so the core stays small. | M |
 | R3 | **Context.** A session takes a `context` object (role, locale, plan, experiment bucket...). Conditions read it via `{ var: 'context.role' }`. Context can change mid-session. | S |
 | R4 | **Display conditions.** `showIf` / `skipIf` on a question, evaluated when the session reaches it. Many surveys are easier to write this way than as jumps. | S |
 | R5 | **Computed variables and scoring.** Named expressions (`score = sum of answers in section A`) usable in conditions, piping and results. | M |
@@ -96,6 +97,15 @@ Grouped by the goal's verbs. Scope: **S** is about a day, **M** a few days, **L*
 | E3 | **i18n.** Per-locale text for questions and options, chosen from context. | M |
 | E4 | **UI bindings** as separate packages, starting with a React `useSurvey()` hook. | L |
 
+### Service and UI (decided: build all three, in one repo)
+
+| ID | Feature | Scope |
+| --- | --- | --- |
+| P1 | **pnpm workspace monorepo.** `packages/core` (published as `survey-skipper`), `packages/yaml`, `packages/react`, `apps/server`, `apps/web`. Shared tsconfig, eslint and CI. | M |
+| SV1 | **Survey service.** HTTP API for definitions (CRUD, versions), sessions (start, answer, back) and responses, on top of E2 storage adapters. | L |
+| UI1 | **Respondent UI.** Renders a session: question types, validation, Back, progress, with abandoned answers prefilled when a question comes round again. | L |
+| UI2 | **Builder UI.** Edit questions and JsonLogic/YAML rules, see the branching graph (S2) and lint results (M1) live. | L |
+
 ## 3. Phased build plan
 
 Each phase ends in a release. Phases 1 and 2 are the heart of the project; later phases can be reordered to taste.
@@ -109,8 +119,11 @@ Each phase ends in a release. Phases 1 and 2 are the heart of the project; later
 - Dependencies: none. Scope: about 1 to 1.5 weeks.
 - Why first: cheap, immediately useful, and every later phase leans on history, events and serialization.
 
-### Phase 2: Rules and context (release 3.0, breaking)
-**C1, R1, R2, R3, R4, R6**
+### Phase 2: Monorepo, rules and context (release 3.0, breaking)
+**P1, C1, R1, R2, R3, R4, R6**
+
+- Start with P1: move the library into `packages/core` under a pnpm workspace before the big rework, so later
+  packages land in place.
 
 - Introduce `SurveyDefinition` + `SurveySession`, the JSON condition language, context, display conditions and named
   endings. `answerMap` compiles to rules; `Survey` stays as a deprecated wrapper for one release.
@@ -139,12 +152,19 @@ Each phase ends in a release. Phases 1 and 2 are the heart of the project; later
 - Dependencies: T1 (events), C1 (sessions as data). R5 needs R2.
 - Scope: about 1.5 weeks.
 
-### Phase 6: Ecosystem (3.x, as needed)
+### Phase 6: Ecosystem (3.x)
 **E1, E2, E3, E4**
 
-- Plugin registry, storage adapters, i18n, React bindings.
+- Plugin registry (custom operators register into JsonLogic), storage adapters, i18n, React bindings.
 - Dependencies: E1 needs R2 and A1/A2 to be extension points; E4 needs the session API settled.
 - Scope: 2 weeks plus, mostly separable.
+
+### Phase 7: Service and apps
+**SV1, UI1, UI2**
+
+- The service on storage adapters, then the respondent UI on the React bindings, then the builder.
+- Dependencies: P1, E2, E4; UI2 also needs S2 and M1.
+- Scope: several weeks; each app is its own track.
 
 ### Dependency sketch
 
@@ -175,20 +195,18 @@ graph LR
 
 If you only build three things, build these, in order:
 
-1. **C2 history + back navigation**: the most visible gap for anyone using the library in a real form.
-2. **R1 + R2 rule engine with JSON conditions**: this is what "branching paths given a set of rules" means, and today
+1. **C2 history + back navigation** (built): the most visible gap for anyone using the library in a real form.
+2. **R1 + R2 rule engine with JsonLogic conditions**: this is what "branching paths given a set of rules" means, and today
    it is limited to exact matches on one answer.
 3. **R3 context**: unlocks "and context" from the goal with very little code once R2 exists.
 
 C1 (the split) is the biggest structural change; doing it together with R1/R2 in one breaking release avoids two rounds
 of churn for users.
 
-## 5. Decisions needed before Phase 2
+## 5. Decisions (answered 2026-11-20)
 
-1. **Is a 3.0 breaking release acceptable**, or must the `Survey` API stay as is (we'd layer sessions on top instead)?
-2. **Library only, or also a service/UI?** This plan keeps core as a dependency-free library and puts storage and UI in
-   adapters/packages. "Manage" and "share" could instead mean a hosted app, which is a much larger project.
-3. **Condition format:** custom JSON (proposed, small and typed) or adopt an existing one such as JsonLogic (more
-   tooling, looser typing).
-4. **Answer-change behaviour:** when an earlier answer changes and the path moves, should answers on the abandoned path
-   be deleted or kept hidden?
+1. **Breaking 3.0 release:** yes. The definition/session split (C1) ships in 3.0.
+2. **Library, service or UI:** all three, in a pnpm monorepo (P1, SV1, UI1, UI2).
+3. **Condition format:** JsonLogic, with YAML authoring support (R2).
+4. **Answer changes:** keep answers on the abandoned route, marked as abandoned, with an option for survey creators to
+   discard them instead (built in C2: `abandonedAnswers`, `keepAbandonedAnswers`).
