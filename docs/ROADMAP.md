@@ -1,7 +1,7 @@
 # Survey Skipper roadmap
 
 Status: decisions answered on 2026-11-20 (see section 5). **Every item below is built** (marked ✅ with the release
-that shipped it), apart from C2's `goTo(id)`.
+that shipped it).
 
 Goal of the project: **create, manage, track, share and extend customizable surveys whose path branches on rules and
 context.** This plan maps that goal onto the library as it stands at v2.0.0 (strict TypeScript, PR #1).
@@ -39,7 +39,7 @@ Grouped by the goal's verbs. Scope: **S** is about a day, **M** a few days, **L*
 | ID | Feature | Scope |
 | --- | --- | --- |
 | C1 | ✅ Built (3.0). **Split definition from session.** `SurveyDefinition` (questions, rules, answer map, settings, `version`) and `SurveySession` (answers, context, position, history, ending). `Survey` remains as a deprecated wrapper until 4.0. | L |
-| C2 | **Navigation history.** ✅ Built. `history`, `back()`, `canGoBack()`, `getPath()`. Changing an earlier answer moves answers on the abandoned route to `abandonedAnswers` (default) or discards them (`keepAbandonedAnswers: false`). Still to do: `goTo(id)` that respects reachability. | M |
+| C2 | **Navigation history.** ✅ Built. `history`, `back()`, `canGoBack()`, `getPath()`. Changing an earlier answer moves answers on the abandoned route to `abandonedAnswers` (default) or discards them (`keepAbandonedAnswers: false`). `goTo(id)` and `canGoTo(id)` jump along the respondent's route (3.6). | M |
 | C3 | ✅ Built (3.0). **Serialization.** `toJSON()` on both classes with `schemaVersion` (1); constructors restore from it and reject newer schemas. Sessions record `definitionId` / `definitionVersion`. Not yet: migrations between schema versions. | S |
 | C4 | ✅ Built (3.1). **Typed answer values.** Answers keep `string | number | boolean` or a list of them; booleans are no longer turned into 1/0. | S |
 

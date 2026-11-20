@@ -84,7 +84,7 @@ interface Context {
  * - `GET /definitions/:id/sessions`, `GET /definitions/:id/stats`
  * - `POST /definitions/:id/sessions` starts a session (`{ context?, version? }`)
  * - `GET|DELETE /sessions/:sid`, `POST /sessions/:sid/answers`, `POST /sessions/:sid/next`,
- *   `POST /sessions/:sid/back`, `PUT /sessions/:sid/context`
+ *   `POST /sessions/:sid/back`, `POST /sessions/:sid/goto`, `PUT /sessions/:sid/context`
  */
 export function createHandler(options: HandlerOptions): Handler {
   const { store } = options;
@@ -247,6 +247,22 @@ export function createHandler(options: HandlerOptions): Handler {
           throw new HttpError(409, 'There is no earlier question to go back to');
         }
         session.back();
+        return [200, await save(sid, session)];
+      },
+    },
+    {
+      method: 'POST',
+      pattern: /^\/sessions\/([^/]+)\/goto$/,
+      run: async (ctx, sid) => {
+        const session = await loadSession(sid);
+        const body = asObject(await ctx.body());
+        if (typeof body.questionId !== 'string' && typeof body.questionId !== 'number') {
+          throw new HttpError(400, 'Send { "questionId": ... }');
+        }
+        if (!session.canGoTo(body.questionId)) {
+          throw new HttpError(409, `Question ${JSON.stringify(body.questionId)} is not on this respondent's route`);
+        }
+        session.goTo(body.questionId);
         return [200, await save(sid, session)];
       },
     },

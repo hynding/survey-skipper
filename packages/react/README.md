@@ -63,6 +63,7 @@ It returns:
 | `errors` | Validation errors by question id, from the last `answer` or `next`. |
 | `next()` | Validates every question on the page, then moves on. Returns `false` and fills `errors` if any fail. |
 | `back()`, `canGoBack` | Back navigation. |
+| `goTo(question)`, `canGoTo(question)` | Jump along the respondent's route, e.g. from a step list. `goTo` returns `false` for a question off the route. |
 | `finished`, `ending` | Whether the survey is over, and the `end` rule's ending, if any. |
 | `textOf(question)` | The question's text in the session's locale, with placeholders filled in. |
 | `setContext(context)` | Replaces the context and re-renders. |

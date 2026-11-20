@@ -43,6 +43,10 @@ export interface UseSurveyResult {
   next: () => boolean;
   back: () => void;
   canGoBack: boolean;
+  /** Jumps along the respondent's route (see `SurveySession.goTo`). Returns `false` if the question is off the route. */
+  goTo: (question: Question) => boolean;
+  /** Whether `goTo` can reach the question. */
+  canGoTo: (question: Question) => boolean;
   finished: boolean;
   ending: string | undefined;
   /** The question's text in the session's locale, with placeholders filled in. */
@@ -140,6 +144,18 @@ export function useSurvey(
     session.back();
   }, [session]);
 
+  const goTo = useCallback(
+    (question: Question): boolean => {
+      if (!session.canGoTo(question.id)) {
+        return false;
+      }
+      setErrors({});
+      session.goTo(question.id);
+      return true;
+    },
+    [session],
+  );
+
   const setContext = useCallback(
     (context: Record<string, unknown>) => {
       session.setContext(context);
@@ -160,13 +176,15 @@ export function useSurvey(
       next,
       back,
       canGoBack: session.canGoBack(),
+      goTo,
+      canGoTo: (q: Question) => session.canGoTo(q.id),
       finished: question === null,
       ending: session.ending,
       textOf: (q: Question) => session.getQuestionText(q),
       setContext,
     };
     // `snapshot` changes whenever the session does.
-  }, [session, snapshot, errors, answer, next, back, setContext]);
+  }, [session, snapshot, errors, answer, next, back, goTo, setContext]);
 }
 
 function isAnswerInput(value: unknown): value is AnswerInput {

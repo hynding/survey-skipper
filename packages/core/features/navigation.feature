@@ -101,3 +101,35 @@ Feature: Going back through a survey
     And I go back
     Then I am returned question 1
     And question 2 has an abandoned answer of yes
+
+  Scenario: Jump back several questions at once
+    Given a 4 question survey of yes or no answers
+    And I answer question 1 with yes
+    And I ask for the next question
+    And I answer question 2 with yes
+    And I ask for the next question
+    And I answer question 3 with yes
+    And I ask for the next question
+    When I go to question 1
+    Then the current question is question 1
+    And question 3 is still answered yes
+    And I can go to question 4
+    And when I go to question 3 the current question is question 3
+
+  Scenario: A question off the route can't be jumped to
+    Given a 4 question survey of yes or no answers
+    And I answer question 1 with yes
+    And I ask for the next question
+    Then I can't go to question 3
+    And going to question 3 is refused
+
+  Scenario: Jumping forward stops being possible once an answer on the way is cleared
+    Given a 3 question survey of yes or no answers
+    And I answer question 1 with yes
+    And I ask for the next question
+    And I answer question 2 with yes
+    And I ask for the next question
+    And I go back
+    And I go back
+    Then I can go to question 3
+    And when question 2's answer is removed I can't go to question 3

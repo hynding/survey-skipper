@@ -442,6 +442,52 @@ export class SurveySession {
     return to;
   }
 
+  /**
+   * Whether {@link goTo} can move to `id`: the current question, a question earlier on the respondent's route, or one
+   * they stepped back past and can reach again with the answers they already gave.
+   */
+  canGoTo(id: QuestionId): boolean {
+    const key = String(id);
+    const current = this.getQuestion();
+    if (current && String(current.id) === key) {
+      return true;
+    }
+    if (this.history.some((h) => String(h) === key)) {
+      return true;
+    }
+    return this.forwardSteps(key) !== undefined;
+  }
+
+  /**
+   * Jumps to a question on the respondent's route, like pressing Back or Next several times. Earlier questions are
+   * reached by stepping back, so later answers are kept until the route changes. Questions the respondent stepped
+   * back past are reached by stepping forward through their stored answers. Any other question would skip the
+   * survey's rules, so it throws a `RangeError`; check {@link canGoTo} first. Returns the question moved to.
+   */
+  goTo(id: QuestionId): Question | null {
+    const key = String(id);
+    const current = this.getQuestion();
+    if (current && String(current.id) === key) {
+      return current;
+    }
+    if (this.history.some((h) => String(h) === key)) {
+      let q: Question | null = current;
+      while (this.history.length > 0 && (!q || String(q.id) !== key)) {
+        q = this.back();
+      }
+      return q;
+    }
+    const steps = this.forwardSteps(key);
+    if (steps === undefined) {
+      throw new RangeError(`Question "${key}" is not on the respondent's route`);
+    }
+    let q: Question | null = current;
+    for (let i = 0; i < steps && q && String(q.id) !== key; i++) {
+      q = this.getNextQuestion();
+    }
+    return q;
+  }
+
   /** The questions shown so far, in order, ending with the current question if there is one. */
   getPath(): Question[] {
     const current = this.getQuestion();
@@ -537,6 +583,22 @@ export class SurveySession {
 
   private record(event: Omit<TimelineEvent, 'at'>): void {
     this.timeline.push({ ...event, at: this.now().toISOString() });
+  }
+
+  /**
+   * How many Next steps reach `key` along the stepped-back route, or `undefined` if it is not there or a question on
+   * the way has no valid answer.
+   */
+  private forwardSteps(key: string): number | undefined {
+    const ahead = [...this.forward].reverse();
+    const position = ahead.findIndex((id) => String(id) === key);
+    if (position === -1) {
+      return undefined;
+    }
+    const current = this.getQuestion();
+    const onTheWay = [current?.id, ...ahead.slice(0, position)];
+    const answered = onTheWay.every((qid) => qid !== undefined && !!this.answers[String(qid)]?.isValid());
+    return answered ? position + 1 : undefined;
   }
 
   /** A question with a valid answer the respondent has not been shown yet is routed past. */
