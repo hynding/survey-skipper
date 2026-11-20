@@ -147,6 +147,11 @@ If the respondent changes an answer and takes a different route, answers on the 
 `abandonedAnswers`: they no longer route or skip, but are not lost. Set `keepAbandonedAnswers: false` on the definition
 to discard them instead. `getPath()` lists the questions shown so far.
 
+`session.goTo(id)` jumps to a question on the respondent's route, as if they pressed Back or Next several times. That
+works for earlier questions, and for questions they stepped back past while every answer on the way is still valid.
+Anything else would bypass the rules, so it throws a `RangeError`. Check with `canGoTo(id)`, for example to enable
+links in a step list.
+
 ### Saving and restoring
 
 Both classes have `toJSON()`, so `JSON.stringify` works directly. Pass the parsed JSON back to the constructor:

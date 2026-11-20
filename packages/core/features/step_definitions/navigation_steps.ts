@@ -69,3 +69,31 @@ Then(
     assert.equal(this.currentSurvey.answers[String(q.id)]?.value, value);
   },
 );
+
+When('I go to question {int}', function (this: SurveyWorld, num: number) {
+  this.actualQuestion = this.currentSurvey.goTo(this.question(num).id);
+});
+
+Then('I can go to question {int}', function (this: SurveyWorld, num: number) {
+  assert.equal(this.currentSurvey.canGoTo(this.question(num).id), true);
+});
+
+Then("I can't go to question {int}", function (this: SurveyWorld, num: number) {
+  assert.equal(this.currentSurvey.canGoTo(this.question(num).id), false);
+});
+
+Then('going to question {int} is refused', function (this: SurveyWorld, num: number) {
+  const before = this.currentSurvey.getQuestion();
+  assert.throws(() => this.currentSurvey.goTo(this.question(num).id), RangeError);
+  assert.equal(this.currentSurvey.getQuestion(), before);
+});
+
+Then('when I go to question {int} the current question is question {int}', function (this: SurveyWorld, a: number, b: number) {
+  this.currentSurvey.goTo(this.question(a).id);
+  assert.equal(this.currentSurvey.getQuestion(), this.question(b));
+});
+
+Then("when question {int}'s answer is removed I can't go to question {int}", function (this: SurveyWorld, a: number, b: number) {
+  Reflect.deleteProperty(this.currentSurvey.answers, String(this.question(a).id));
+  assert.equal(this.currentSurvey.canGoTo(this.question(b).id), false);
+});

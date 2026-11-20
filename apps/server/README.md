@@ -47,6 +47,7 @@ All bodies are JSON. 🔑 marks creator routes that need the API key when one is
 | `POST /sessions/:sid/answers` | Answer. Body: `{ value, questionId?, text? }`, current question by default. 422 with `errors` if invalid. |
 | `POST /sessions/:sid/next` | Validate the current page and move on. 422 with `errors` if anything is missing or invalid. |
 | `POST /sessions/:sid/back` | Go back one question. 409 if there is nowhere to go. |
+| `POST /sessions/:sid/goto` | Jump along the respondent's route. Body: `{ questionId }`. 409 if the question is off the route. |
 | `PUT /sessions/:sid/context` | Replace the session's context. |
 | `DELETE /sessions/:sid` | Delete a session. |
 

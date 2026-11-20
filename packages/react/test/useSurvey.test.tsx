@@ -121,3 +121,22 @@ void test('a component re-renders as the survey moves', () => {
   assert.ok(screen.getByText('Thanks'));
   cleanup();
 });
+
+void test('goTo jumps along the route and refuses other questions', () => {
+  const { result } = renderHook(() => useSurvey(definition));
+  const [age, role] = result.current.session.questions;
+  assert.ok(age && role);
+  act(() => {
+    result.current.answer(30);
+    result.current.next();
+  });
+  assert.equal(result.current.question?.id, 'done');
+  assert.equal(result.current.canGoTo(role), false);
+  act(() => {
+    assert.equal(result.current.goTo(role), false);
+  });
+  act(() => {
+    assert.equal(result.current.goTo(age), true);
+  });
+  assert.equal(result.current.question.id, 'age');
+});

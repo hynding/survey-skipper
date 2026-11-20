@@ -96,6 +96,17 @@ void test('a respondent answers, moves on, goes back and finishes', async () => 
   assert.equal((await call<SessionView>('GET', `/sessions/${sid}`)).body.ending, 'too_young');
 });
 
+void test('goto jumps along the route only', async () => {
+  const { body } = await call<SessionView>('POST', '/definitions/commute/sessions');
+  const sid = body.sessionId;
+  await call('POST', `/sessions/${sid}/answers`, { value: 40 });
+  await call('POST', `/sessions/${sid}/next`);
+  assert.equal((await call('POST', `/sessions/${sid}/goto`, { questionId: 'role' })).status, 409);
+  assert.equal((await call('POST', `/sessions/${sid}/goto`, {})).status, 400);
+  const jumped = await call<SessionView>('POST', `/sessions/${sid}/goto`, { questionId: 'age' });
+  assert.equal(jumped.body.question?.id, 'age');
+});
+
 void test('context updates re-route the session', async () => {
   const { body } = await call<SessionView>('POST', '/definitions/commute/sessions');
   await call('PUT', `/sessions/${body.sessionId}/context`, { employed: true, name: 'Bo' });
