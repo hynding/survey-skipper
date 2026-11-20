@@ -103,7 +103,7 @@ Grouped by the goal's verbs. Scope: **S** is about a day, **M** a few days, **L*
 | --- | --- | --- |
 | P1 | ✅ Built. **pnpm workspace monorepo.** `packages/core` (published as `survey-skipper`), `packages/yaml`, `packages/react`, `apps/server`, `apps/web`. Shared tsconfig, eslint and CI. | M |
 | SV1 | ✅ Built (server 0.1, `apps/server`). **Survey service.** HTTP API for definitions (CRUD, versions), sessions (start, answer, back) and responses, on top of E2 storage adapters. | L |
-| UI1 | **Respondent UI.** Renders a session: question types, validation, Back, progress, with abandoned answers prefilled when a question comes round again. | L |
+| UI1 | ✅ Built (`apps/web` 0.1). **Respondent UI.** Renders a session: question types, validation, Back, progress, with abandoned answers prefilled when a question comes round again. | L |
 | UI2 | **Builder UI.** Edit questions and JsonLogic/YAML rules, see the branching graph (S2) and lint results (M1) live. | L |
 
 ## 3. Phased build plan

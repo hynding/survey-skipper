@@ -1,0 +1,34 @@
+{
+  "name": "survey-skipper-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Web app for answering survey-skipper surveys, backed by survey-skipper-server",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "node --import tsx --import global-jsdom/register --test test/*.test.tsx",
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run build"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "survey-skipper": "workspace:^",
+    "survey-skipper-react": "workspace:^",
+    "survey-skipper-server": "workspace:^",
+    "survey-skipper-yaml": "workspace:^"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "global-jsdom": "^31.0.0",
+    "jsdom": "^31.0.1",
+    "vite": "^8.3.8"
+  }
+}
