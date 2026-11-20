@@ -1,71 +1,27 @@
 # Survey Skipper
-A simple but smart survey system, agnostic of service implementation, to allow skipping questions based on predetermined
-answers.
 
-Written in TypeScript and published as CommonJS with type declarations.
+Create, manage, track, share and extend customizable surveys whose path branches on rules and context.
 
-## Install
+This is a pnpm workspace. Packages:
 
-```sh
-npm install survey-skipper
-```
+| Package | Path | What it is |
+| --- | --- | --- |
+| [`survey-skipper`](packages/core) | `packages/core` | The core library: questions, answers, JsonLogic branching rules, context, Back navigation. Framework-agnostic, published to npm. |
+| [`survey-skipper-yaml`](packages/yaml) | `packages/yaml` | Write surveys and their rules in YAML. |
 
-## Usage
-
-```ts
-import { Answer, Question, Survey } from 'survey-skipper';
-
-const yes = () => new Answer({ value: 'yes' });
-const no = () => new Answer({ value: 'no' });
-
-const q1 = new Question({ id: 'q1', text: 'Do you own a car?', answers: [yes(), no()] });
-const q2 = new Question({ id: 'q2', text: 'What make is it?', answers: [new Answer({ isCustom: true })] });
-const q3 = new Question({ id: 'q3', text: 'How do you get to work?', answers: [yes(), no()] });
-
-const survey = new Survey({ questions: [q1, q2, q3] });
-
-// Answering "no" to q1 skips straight to q3.
-survey.mapAnswer(q1, q1.answers[1]!, q3);
-
-survey.setAnswer(new Answer({ value: 'no' }));
-survey.getNextQuestion(); // => q3
-```
-
-### Concepts
-
-- **Answer map**: `answerMap[fromQuestionId][answerKey] = toQuestionId`. The key is the answer's value, or the survey's
-  `customKey` (default `'*'`) for custom answers. Unmapped answers move on to the next question in order.
-- **Pre-answers**: `setAnswer(answer, futureQuestion)` answers a later question now. When the survey reaches it, it is
-  skipped, but its own mapping still decides where to go next.
-- **Batches**: `getNextQuestions(n)` returns up to `n` consecutive questions; `setAnswers(answers)` answers them in order.
-  Only the last answer's mapping affects what comes next.
-- **Going back**: `back()` returns to the previous question the respondent was shown (or `null` at the start;
-  check with `canGoBack()`). Answers are kept, so a UI can prefill them. Moving forward along the same route asks
-  those questions again rather than skipping them. If the respondent changes an answer and takes a different route,
-  answers on the route they left move from `answers` to `abandonedAnswers`, so they no longer route or skip but are not
-  lost. Pass `keepAbandonedAnswers: false` to discard them instead. `getPath()` lists the questions shown so far.
-- **Persistence**: a survey's `questions`, `answers` and `answerMap` can be saved as JSON and passed back to
-  `new Survey({...})`, along with `currentQuestionId`. Save `history`, `forward` and `abandonedAnswers` too to keep
-  navigation state. Plain objects are turned back into `Question` / `Answer`
-  instances.
-- `getNextQuestion()` returns `null` when the survey is finished, including when pre-answered questions route in a
-  loop with nowhere left to go.
-
-### Errors
-
-- `new Question({...})` throws a `TypeError` without an `id`.
-- `mapAnswer` throws a `TypeError` for an empty answer value, and a `RangeError` if the target question is not in the
-  survey.
+Planned packages (React bindings, a survey service and web apps) are listed in the
+[roadmap](docs/ROADMAP.md). Libraries go in `packages/`, runnable apps in `apps/`.
 
 ## Development
 
-Requires Node 22 or later for the dev tooling (the published library runs on Node 20+).
+Requires Node 22 or later and pnpm 10 (`corepack enable` picks up the pinned version).
 
 ```sh
-npm ci
-npm run typecheck   # tsc --noEmit
-npm run lint        # eslint (typescript-eslint strict, type-checked)
-npm test            # cucumber-js feature tests
-npm run build       # emits dist/
-npm run check       # all of the above
+pnpm install
+pnpm run check       # typecheck, lint, test and build every package, in dependency order
+pnpm run build       # build every package
+pnpm run test        # every package's tests (build first: packages import each other's dist/)
 ```
+
+Shared dev tooling (TypeScript, ESLint, tsx) is declared in the root `package.json`; a package declares only what is
+specific to it. Each package extends `tsconfig.base.json`.

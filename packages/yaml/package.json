@@ -1,0 +1,44 @@
+{
+  "name": "survey-skipper-yaml",
+  "version": "0.1.0",
+  "description": "Write survey-skipper surveys, including their JsonLogic rules, in YAML",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "node --import tsx --test test/*.test.ts",
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run build",
+    "prepack": "pnpm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hynding/survey-skipper.git",
+    "directory": "packages/yaml"
+  },
+  "author": "Steve Hynding",
+  "license": "MIT",
+  "type": "commonjs",
+  "peerDependencies": {
+    "survey-skipper": "workspace:^"
+  },
+  "dependencies": {
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "survey-skipper": "workspace:^"
+  }
+}

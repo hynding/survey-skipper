@@ -1,4 +1,5 @@
 import { Answer, type AnswerInput } from './answer';
+import type { Condition, Rule } from './rules';
 import { isNil } from './utils';
 
 export type QuestionId = string | number;
@@ -8,19 +9,27 @@ export interface QuestionInput {
   text?: string;
   /** Plain objects are wrapped in {@link Answer}. */
   answers?: (Answer | AnswerInput)[];
+  /** Branching rules, checked in order when leaving this question. See {@link Rule}. */
+  rules?: Rule[];
+  /** When set, the question is only asked if this condition holds; otherwise the survey routes past it. */
+  showIf?: Condition;
 }
 
 export class Question {
   id: QuestionId;
   text: string | undefined;
   answers: Answer[];
+  rules: Rule[];
+  showIf: Condition | undefined;
 
-  constructor({ id, text, answers = [] }: QuestionInput) {
+  constructor({ id, text, answers = [], rules = [], showIf }: QuestionInput) {
     if (isNil(id)) {
       throw new TypeError('Question requires an id');
     }
     this.id = id;
     this.text = text;
     this.answers = answers.map((answer) => Answer.from(answer));
+    this.rules = rules.map((rule) => ({ ...rule }));
+    this.showIf = showIf;
   }
 }
