@@ -1,8 +1,8 @@
-import type { Answer } from './answer';
-import { SurveyDefinition, type AnswerMap, type SurveyDefinitionInput } from './definition';
-import type { Question, QuestionId } from './question';
-import type { Rule } from './rules';
-import { SurveySession, type SessionState } from './session';
+import type { Answer } from './answer.js';
+import { SurveyDefinition, type AnswerMap, type SurveyDefinitionInput } from './definition.js';
+import type { Question, QuestionId } from './question.js';
+import type { Rule } from './rules.js';
+import { SurveySession, type SessionState } from './session.js';
 
 /** Definition and session fields together, as accepted by the 2.x {@link Survey} constructor. */
 export interface SurveyInput extends SurveyDefinitionInput, SessionState {}

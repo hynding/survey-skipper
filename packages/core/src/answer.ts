@@ -1,4 +1,4 @@
-import { isNil } from './utils';
+import { isNil } from './utils.js';
 
 /** A single value an answer can carry. */
 export type ScalarValue = string | number | boolean;

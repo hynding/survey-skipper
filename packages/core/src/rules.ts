@@ -1,7 +1,7 @@
-import * as jsonLogic from 'json-logic-js';
-import type { AnswerValue } from './answer';
-import type { QuestionId } from './question';
-import { isNil } from './utils';
+import jsonLogic from 'json-logic-js';
+import type { AnswerValue } from './answer.js';
+import type { QuestionId } from './question.js';
+import { isNil } from './utils.js';
 
 /**
  * A JsonLogic expression (https://jsonlogic.com), as plain JSON. Conditions are evaluated against

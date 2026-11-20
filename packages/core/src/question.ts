@@ -1,6 +1,6 @@
-import { Answer, type AnswerInput } from './answer';
-import type { Condition, Rule } from './rules';
-import { isNil } from './utils';
+import { Answer, type AnswerInput } from './answer.js';
+import type { Condition, Rule } from './rules.js';
+import { isNil } from './utils.js';
 
 export type QuestionId = string | number;
 

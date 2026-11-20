@@ -1,8 +1,8 @@
-import { Answer, type AnswerInput, type AnswerValue } from './answer';
-import { SCHEMA_VERSION, SurveyDefinition, type SurveyDefinitionInput } from './definition';
-import type { Question, QuestionId } from './question';
-import { evaluate, type RuleData } from './rules';
-import { validateAnswer, type ValidationError } from './validation';
+import { Answer, type AnswerInput, type AnswerValue } from './answer.js';
+import { SCHEMA_VERSION, SurveyDefinition, type SurveyDefinitionInput } from './definition.js';
+import type { Question, QuestionId } from './question.js';
+import { evaluate, type RuleData } from './rules.js';
+import { validateAnswer, type ValidationError } from './validation.js';
 
 /** Events a session emits, with the payload each listener receives. */
 export interface SessionEvents {
@@ -21,7 +21,7 @@ export interface SessionEvents {
 export type SessionListener<K extends keyof SessionEvents> = (event: SessionEvents[K]) => void;
 
 const TEMPLATE = /\{\{\s*([^{}\s]+)\s*\}\}/g;
-import { isNil } from './utils';
+import { isNil } from './utils.js';
 
 /** A respondent's progress through a survey. Restores a {@link SurveySession}; {@link SurveySession.toJSON} produces it. */
 export interface SessionState {

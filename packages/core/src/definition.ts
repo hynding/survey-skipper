@@ -1,7 +1,7 @@
-import type { Answer } from './answer';
-import { Question, type QuestionId, type QuestionInput } from './question';
-import { assertRuleShape, type Rule } from './rules';
-import { isNil } from './utils';
+import type { Answer } from './answer.js';
+import { Question, type QuestionId, type QuestionInput } from './question.js';
+import { assertRuleShape, type Rule } from './rules.js';
+import { isNil } from './utils.js';
 
 /** The version of the JSON shapes produced by `toJSON()`. Bumped when they change incompatibly. */
 export const SCHEMA_VERSION = 1;
