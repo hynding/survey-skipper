@@ -33,6 +33,8 @@ export interface RuleData {
   context: Record<string, unknown>;
   /** The value of the answer to the question being routed from, or `null` if it has none. */
   answer: AnswerValue | null;
+  /** The definition's computed variables, by name. */
+  vars: Record<string, unknown>;
 }
 
 jsonLogic.add_operation('matches', (value: unknown, pattern: unknown): boolean => {
@@ -55,6 +57,11 @@ export function evaluate(condition: Condition | undefined, data: RuleData): bool
   }
   const result: unknown = jsonLogic.apply(condition, data);
   return jsonLogic.truthy(result);
+}
+
+/** Evaluates a JsonLogic expression and returns its value, for computed variables. */
+export function compute(expression: Condition, data: RuleData): unknown {
+  return jsonLogic.apply(expression, data);
 }
 
 /** Throws a `TypeError` unless the rule has exactly one of `goTo` or `end`. */

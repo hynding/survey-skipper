@@ -1,6 +1,6 @@
 import type { Answer } from './answer.js';
 import { Question, type QuestionId, type QuestionInput } from './question.js';
-import { assertRuleShape, type Rule } from './rules.js';
+import { assertRuleShape, type Condition, type Rule } from './rules.js';
 import { isNil } from './utils.js';
 
 /** The version of the JSON shapes produced by `toJSON()`. Bumped when they change incompatibly. */
@@ -31,6 +31,11 @@ export interface SurveyDefinitionInput {
    * session's `abandonedAnswers` (`true`, the default) or discard them (`false`).
    */
   keepAbandonedAnswers?: boolean;
+  /**
+   * Computed variables: JsonLogic expressions evaluated in order against the session's data, readable as `vars.<name>`
+   * in conditions and piped text. Later variables can use earlier ones.
+   */
+  variables?: Record<string, Condition>;
 }
 
 /** What {@link SurveyDefinition.toJSON} returns. Pass it back to `new SurveyDefinition(...)` to restore. */
@@ -55,6 +60,7 @@ export class SurveyDefinition {
   answerMap: AnswerMap;
   customKey: string;
   keepAbandonedAnswers: boolean;
+  variables: Record<string, Condition>;
   private readonly idMap = new Map<string, number>();
 
   constructor({
@@ -67,6 +73,7 @@ export class SurveyDefinition {
     answerMap = {},
     customKey,
     keepAbandonedAnswers = true,
+    variables = {},
   }: SurveyDefinitionInput = {}) {
     if (!isNil(schemaVersion) && schemaVersion > SCHEMA_VERSION) {
       throw new RangeError(
@@ -81,6 +88,7 @@ export class SurveyDefinition {
     this.answerMap = answerMap;
     this.customKey = customKey?.length ? customKey : '*';
     this.keepAbandonedAnswers = keepAbandonedAnswers;
+    this.variables = { ...variables };
     this.reindex();
   }
 
@@ -160,6 +168,7 @@ export class SurveyDefinition {
       answerMap: this.answerMap,
       customKey: this.customKey,
       keepAbandonedAnswers: this.keepAbandonedAnswers,
+      ...(Object.keys(this.variables).length > 0 ? { variables: this.variables } : {}),
     };
   }
 

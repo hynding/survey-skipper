@@ -41,6 +41,7 @@ export function stringifySurvey(survey: SurveyDefinition | SurveySession | Surve
     description: s.description,
     customKey: s.customKey === '*' ? undefined : s.customKey,
     keepAbandonedAnswers: s.keepAbandonedAnswers ? undefined : false,
+    variables: Object.keys(s.variables).length > 0 ? s.variables : undefined,
     questions: s.questions.map(questionDefinition),
     answerMap: Object.keys(s.answerMap).length > 0 ? s.answerMap : undefined,
   });
