@@ -1,22 +1,47 @@
 {
   "name": "survey-skipper",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "A simple but smart survey system agnostic of service implementation details",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "test": "./node_modules/.bin/cucumber.js"
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "cucumber-js",
+    "check": "npm run typecheck && npm run lint && npm test && npm run build",
+    "prepare": "npm run build"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/hynding/survey-skipper.git"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Steve Hynding",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/hynding/survey-skipper/issues"
   },
   "homepage": "https://github.com/hynding/survey-skipper#readme",
   "devDependencies": {
-    "cucumber": "^2.3.1"
-  }
+    "@cucumber/cucumber": "^13.3.0",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.6",
+    "eslint": "^10.15.0",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.73.0"
+  },
+  "type": "commonjs"
 }
