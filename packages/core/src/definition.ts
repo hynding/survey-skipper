@@ -36,6 +36,10 @@ export interface SurveyDefinitionInput {
    * in conditions and piped text. Later variables can use earlier ones.
    */
   variables?: Record<string, Condition>;
+  /** The locale the plain `text`, `title` and `description` are written in. */
+  defaultLocale?: string;
+  /** Title and description in other languages, keyed by locale. Question text is translated on each question. */
+  translations?: Record<string, { title?: string; description?: string }>;
 }
 
 /** What {@link SurveyDefinition.toJSON} returns. Pass it back to `new SurveyDefinition(...)` to restore. */
@@ -61,6 +65,8 @@ export class SurveyDefinition {
   customKey: string;
   keepAbandonedAnswers: boolean;
   variables: Record<string, Condition>;
+  defaultLocale: string | undefined;
+  translations: Record<string, { title?: string; description?: string }>;
   private readonly idMap = new Map<string, number>();
 
   constructor({
@@ -74,6 +80,8 @@ export class SurveyDefinition {
     customKey,
     keepAbandonedAnswers = true,
     variables = {},
+    defaultLocale,
+    translations = {},
   }: SurveyDefinitionInput = {}) {
     if (!isNil(schemaVersion) && schemaVersion > SCHEMA_VERSION) {
       throw new RangeError(
@@ -89,6 +97,8 @@ export class SurveyDefinition {
     this.customKey = customKey?.length ? customKey : '*';
     this.keepAbandonedAnswers = keepAbandonedAnswers;
     this.variables = { ...variables };
+    this.defaultLocale = defaultLocale;
+    this.translations = { ...translations };
     this.reindex();
   }
 
@@ -169,6 +179,8 @@ export class SurveyDefinition {
       customKey: this.customKey,
       keepAbandonedAnswers: this.keepAbandonedAnswers,
       ...(Object.keys(this.variables).length > 0 ? { variables: this.variables } : {}),
+      ...(this.defaultLocale === undefined ? {} : { defaultLocale: this.defaultLocale }),
+      ...(Object.keys(this.translations).length > 0 ? { translations: this.translations } : {}),
     };
   }
 

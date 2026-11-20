@@ -92,9 +92,9 @@ Grouped by the goal's verbs. Scope: **S** is about a day, **M** a few days, **L*
 
 | ID | Feature | Scope |
 | --- | --- | --- |
-| E1 | **Plugin registry.** Register custom condition operators, question types and validators (`registerOperator('withinRadius', fn)`). | M |
-| E2 | **Storage adapter interface.** `load/save` for sessions and definitions, with an in-memory adapter and a `localStorage` example. Back-ends stay out of core. | S |
-| E3 | **i18n.** Per-locale text for questions and options, chosen from context. | M |
+| E1 | ✅ Built (3.5). **Plugin registry.** `registerOperator`, `registerQuestionType`, `registerValidator` (used via `validation.custom`), `resetPlugins`. | M |
+| E2 | ✅ Built (3.5). **Storage adapter interface.** Async `SurveyStore`, `MemoryStore`, `WebStorageStore` (localStorage), `resumeSession()`. | S |
+| E3 | ✅ Built (3.5). **i18n.** Question and definition `translations`, `defaultLocale`, locale from `context.locale` with `fr-CA` to `fr` fallback; `getQuestionText`, `getAnswerText`, `getTitle`, `getDescription`. | M |
 | E4 | **UI bindings** as separate packages, starting with a React `useSurvey()` hook. | L |
 
 ### Service and UI (decided: build all three, in one repo)

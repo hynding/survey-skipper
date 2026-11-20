@@ -42,6 +42,8 @@ export function stringifySurvey(survey: SurveyDefinition | SurveySession | Surve
     customKey: s.customKey === '*' ? undefined : s.customKey,
     keepAbandonedAnswers: s.keepAbandonedAnswers ? undefined : false,
     variables: Object.keys(s.variables).length > 0 ? s.variables : undefined,
+    defaultLocale: s.defaultLocale,
+    translations: Object.keys(s.translations).length > 0 ? s.translations : undefined,
     questions: s.questions.map(questionDefinition),
     answerMap: Object.keys(s.answerMap).length > 0 ? s.answerMap : undefined,
   });
@@ -57,6 +59,7 @@ function questionDefinition(q: Question): Record<string, unknown> {
     section: q.section,
     required: q.required ? true : undefined,
     validation: Object.keys(q.validation).length > 0 ? q.validation : undefined,
+    translations: Object.keys(q.translations).length > 0 ? q.translations : undefined,
     showIf: q.showIf,
     skipIf: q.skipIf,
     rules: q.rules.length > 0 ? q.rules : undefined,

@@ -167,10 +167,41 @@ export class SurveySession {
     return template.replace(TEMPLATE, (_match, path: string) => formatValue(lookup(data, path)));
   }
 
-  /** The question's text with placeholders filled in. Defaults to the current question. */
+  /**
+   * The question's text in the session's locale, with placeholders filled in. Defaults to the current question.
+   * Falls back from `fr-CA` to `fr` to the plain `text`.
+   */
   getQuestionText(question?: Question | null): string {
     const q = question ?? this.getQuestion();
-    return q?.text === undefined ? '' : this.renderText(q.text, q);
+    if (!q) {
+      return '';
+    }
+    const text = this.pick(q.translations, (t) => t.text) ?? q.text;
+    return text === undefined ? '' : this.renderText(text, q);
+  }
+
+  /** An answer option's text in the session's locale, falling back to its own `text`. */
+  getAnswerText(answer: Answer, question?: Question | null): string {
+    const q = question ?? this.getQuestion();
+    const key = Array.isArray(answer.value) ? answer.value.map(String).join(',') : String(answer.value);
+    const translated = q ? this.pick(q.translations, (t) => t.answers?.[key]) : undefined;
+    return translated ?? answer.text ?? '';
+  }
+
+  /** The survey title in the session's locale. */
+  getTitle(): string | undefined {
+    return this.pick(this.definition.translations, (t) => t.title) ?? this.definition.title;
+  }
+
+  /** The survey description in the session's locale. */
+  getDescription(): string | undefined {
+    return this.pick(this.definition.translations, (t) => t.description) ?? this.definition.description;
+  }
+
+  /** The session's locale: `context.locale` when it is a string, otherwise the definition's `defaultLocale`. */
+  get locale(): string | undefined {
+    const fromContext = this.context.locale;
+    return typeof fromContext === 'string' ? fromContext : this.definition.defaultLocale;
   }
 
   /**
@@ -437,6 +468,22 @@ export class SurveySession {
       timeline: this.timeline,
       ending: this.ending,
     };
+  }
+
+  private pick<T>(translations: Record<string, T>, get: (t: T) => string | undefined): string | undefined {
+    const locale = this.locale;
+    if (locale === undefined) {
+      return undefined;
+    }
+    const candidates = [locale, locale.split('-')[0] ?? locale];
+    for (const candidate of candidates) {
+      const t = translations[candidate];
+      const value = t === undefined ? undefined : get(t);
+      if (value !== undefined) {
+        return value;
+      }
+    }
+    return undefined;
   }
 
   private emit<K extends keyof SessionEvents>(event: K, payload: SessionEvents[K]): void {

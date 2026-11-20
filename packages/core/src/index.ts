@@ -1,7 +1,14 @@
 export { Answer } from './answer.js';
 export type { AnswerInput, AnswerValue, ScalarValue } from './answer.js';
 export { Question } from './question.js';
-export type { QuestionId, QuestionInput, QuestionType, ValidationRules } from './question.js';
+export type {
+  BuiltInQuestionType,
+  QuestionId,
+  QuestionInput,
+  QuestionTranslation,
+  QuestionType,
+  ValidationRules,
+} from './question.js';
 export { validateAnswer } from './validation.js';
 export type { ValidationCode, ValidationError } from './validation.js';
 export { SCHEMA_VERSION, SurveyDefinition } from './definition.js';
@@ -50,3 +57,12 @@ export { aggregate, timeOnQuestions } from './analytics.js';
 export type { QuestionStats, SurveyStats } from './analytics.js';
 export { migrateSession } from './versioning.js';
 export type { MigrationReport } from './versioning.js';
+export {
+  registerOperator,
+  registerQuestionType,
+  registerValidator,
+  resetPlugins,
+} from './plugins.js';
+export type { TypeCheck, Validator } from './plugins.js';
+export { MemoryStore, resumeSession, WebStorageStore } from './storage.js';
+export type { KeyValueStorage, SurveyStore } from './storage.js';

@@ -1,5 +1,6 @@
 import type { SurveyDefinition } from './definition.js';
 import { getEdges } from './graph.js';
+import { getValidator, isKnownType } from './plugins.js';
 import type { QuestionId } from './question.js';
 import type { Condition } from './rules.js';
 import { isNil } from './utils.js';
@@ -13,7 +14,9 @@ export type LintCode =
   | 'unreachable-question'
   | 'unknown-reference'
   | 'invalid-pattern'
-  | 'missing-options';
+  | 'missing-options'
+  | 'unknown-type'
+  | 'unknown-validator';
 
 export interface LintIssue {
   severity: 'error' | 'warning';
@@ -67,6 +70,14 @@ export function lintDefinition(definition: SurveyDefinition): LintIssue[] {
 
     if (q.validation.pattern !== undefined && !isRegExp(q.validation.pattern)) {
       issues.push({ severity: 'error', code: 'invalid-pattern', message: `The validation pattern on "${String(q.id)}" is not a valid regular expression`, questionId: q.id });
+    }
+    if (q.type !== undefined && !isKnownType(q.type)) {
+      issues.push({ severity: 'warning', code: 'unknown-type', message: `"${String(q.id)}" has unregistered question type "${q.type}"`, questionId: q.id });
+    }
+    for (const entry of q.validation.custom ?? []) {
+      if (!getValidator(entry.name)) {
+        issues.push({ severity: 'error', code: 'unknown-validator', message: `"${String(q.id)}" uses unregistered validator "${entry.name}"`, questionId: q.id });
+      }
     }
     if ((q.type === 'single' || q.type === 'multi') && q.answers.length === 0) {
       issues.push({ severity: 'warning', code: 'missing-options', message: `"${String(q.id)}" is a ${q.type} choice question with no answer options`, questionId: q.id });
