@@ -186,6 +186,23 @@ ran against.
   current question was removed, the session resumes at its first unanswered question. It returns the new state and a
   report of what was kept, removed and invalid.
 
+### Plugins, storage and translations
+
+- **Plugins:** `registerOperator(name, fn)` adds a JsonLogic operator (built-in names are refused).
+  `registerQuestionType(name, check)` adds a question type whose `check(value, question)` returns an error message or
+  `undefined`. `registerValidator(name, fn)` adds a validator that questions use through
+  `validation: { custom: [{ name, args?, message? }] }`; failures have code `custom` and the validator's name.
+  Registrations are global to the process; `resetPlugins()` clears them. `lintDefinition` flags unregistered types and
+  validators.
+- **Storage:** `SurveyStore` is an async interface for saving and loading definitions (by id and version) and
+  sessions (by your own session id). `MemoryStore` keeps everything in memory, and `WebStorageStore(localStorage)`
+  works in browsers or with any `getItem` / `setItem` storage. `resumeSession(store, sessionId)` loads a session
+  together with the exact definition version it ran against.
+- **Translations:** questions take `translations: { fr: { text, answers: { <value>: 'text' } } }`, and definitions take
+  `defaultLocale` and `translations: { fr: { title, description } }`. The session's locale is `context.locale`, falling
+  back from `fr-CA` to `fr` to the plain text. Use `getQuestionText`, `getAnswerText(option)`, `getTitle` and
+  `getDescription`.
+
 ### Authoring tools
 
 ```ts

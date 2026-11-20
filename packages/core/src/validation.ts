@@ -1,4 +1,5 @@
 import { Answer, type AnswerInput, type AnswerValue, type ScalarValue } from './answer.js';
+import { getQuestionType, getValidator } from './plugins.js';
 import type { Question } from './question.js';
 
 export type ValidationCode =
@@ -11,11 +12,14 @@ export type ValidationCode =
   | 'maxLength'
   | 'pattern'
   | 'minSelected'
-  | 'maxSelected';
+  | 'maxSelected'
+  | 'custom';
 
 export interface ValidationError {
   code: ValidationCode;
   message: string;
+  /** The registered validator's name, for `custom` errors. */
+  validator?: string;
 }
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -33,7 +37,7 @@ export function validateAnswer(question: Question, input: Answer | AnswerInput |
   if (typeError) {
     return [typeError];
   }
-  return [...checkOptions(question, answer), ...checkRules(question, answer.value)];
+  return [...checkOptions(question, answer), ...checkRules(question, answer.value), ...checkCustom(question, answer.value)];
 }
 
 function checkType(question: Question, value: AnswerValue): ValidationError | undefined {
@@ -56,7 +60,26 @@ function checkType(question: Question, value: AnswerValue): ValidationError | un
       return typeof value === 'string' && DATE.test(value) && !Number.isNaN(Date.parse(value))
         ? undefined
         : error('type', 'Expected a date as YYYY-MM-DD');
+    default: {
+      const message = getQuestionType(question.type)?.(value, question);
+      return message === undefined ? undefined : error('type', message);
+    }
   }
+}
+
+function checkCustom(question: Question, value: AnswerValue): ValidationError[] {
+  const errors: ValidationError[] = [];
+  for (const entry of question.validation.custom ?? []) {
+    const validator = getValidator(entry.name);
+    if (!validator) {
+      throw new RangeError(`No validator named "${entry.name}" is registered`);
+    }
+    const message = validator(value, question, entry.args);
+    if (message !== undefined) {
+      errors.push({ code: 'custom', message: entry.message ?? message, validator: entry.name });
+    }
+  }
+  return errors;
 }
 
 function checkOptions(question: Question, answer: Answer): ValidationError[] {

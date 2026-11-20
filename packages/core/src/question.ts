@@ -14,7 +14,18 @@ export type QuestionId = string | number;
  * - `date`: an ISO date string, `YYYY-MM-DD`
  * - `boolean`: `true` or `false`
  */
-export type QuestionType = 'single' | 'multi' | 'text' | 'number' | 'rating' | 'date' | 'boolean';
+export type BuiltInQuestionType = 'single' | 'multi' | 'text' | 'number' | 'rating' | 'date' | 'boolean';
+
+/** A built-in type, or a name registered with `registerQuestionType`. */
+// `string & {}` keeps editor suggestions for the built-in names.
+export type QuestionType = BuiltInQuestionType | (string & {});
+
+/** Text in other languages, keyed by locale (`fr`, `fr-CA`). */
+export interface QuestionTranslation {
+  text?: string;
+  /** Answer option text keyed by the option's value. */
+  answers?: Record<string, string>;
+}
 
 /** Constraints checked by `validateAnswer` and `SurveySession.answer`. */
 export interface ValidationRules {
@@ -28,6 +39,8 @@ export interface ValidationRules {
   pattern?: string;
   minSelected?: number;
   maxSelected?: number;
+  /** Validators registered with `registerValidator`, run in order after the built-in checks. */
+  custom?: { name: string; args?: unknown; message?: string }[];
 }
 
 export interface QuestionInput {
@@ -47,6 +60,8 @@ export interface QuestionInput {
   /** Whether an answer is needed before moving on. Checked by `SurveySession.answer` and `validate`. */
   required?: boolean;
   validation?: ValidationRules;
+  /** Translations keyed by locale. The session picks one from `context.locale`. */
+  translations?: Record<string, QuestionTranslation>;
 }
 
 export class Question {
@@ -60,8 +75,9 @@ export class Question {
   section: string | undefined;
   required: boolean;
   validation: ValidationRules;
+  translations: Record<string, QuestionTranslation>;
 
-  constructor({ id, text, answers = [], rules = [], showIf, skipIf, type, section, required = false, validation = {} }: QuestionInput) {
+  constructor({ id, text, answers = [], rules = [], showIf, skipIf, type, section, required = false, validation = {}, translations = {} }: QuestionInput) {
     if (isNil(id)) {
       throw new TypeError('Question requires an id');
     }
@@ -75,6 +91,7 @@ export class Question {
     this.section = section;
     this.required = required;
     this.validation = { ...validation };
+    this.translations = { ...translations };
   }
 
   /** Wraps a plain object (e.g. deserialized JSON) in a Question; passes Questions through. */

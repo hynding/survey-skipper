@@ -49,6 +49,24 @@
       "additionalProperties": {
         "$ref": "#/$defs/condition"
       }
+    },
+    "defaultLocale": {
+      "type": "string"
+    },
+    "translations": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
     }
   },
   "additionalProperties": false,
@@ -159,14 +177,22 @@
           "type": "string"
         },
         "type": {
-          "enum": [
-            "single",
-            "multi",
-            "text",
-            "number",
-            "rating",
-            "date",
-            "boolean"
+          "description": "A built-in type, or a name registered with registerQuestionType.",
+          "anyOf": [
+            {
+              "enum": [
+                "single",
+                "multi",
+                "text",
+                "number",
+                "rating",
+                "date",
+                "boolean"
+              ]
+            },
+            {
+              "type": "string"
+            }
           ]
         },
         "section": {
@@ -226,9 +252,46 @@
             "maxSelected": {
               "type": "integer",
               "minimum": 0
+            },
+            "custom": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "args": {},
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
             }
           },
           "additionalProperties": false
+        },
+        "translations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "answers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
         }
       },
       "additionalProperties": false
