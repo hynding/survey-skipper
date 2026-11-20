@@ -95,7 +95,7 @@ Grouped by the goal's verbs. Scope: **S** is about a day, **M** a few days, **L*
 | E1 | ✅ Built (3.5). **Plugin registry.** `registerOperator`, `registerQuestionType`, `registerValidator` (used via `validation.custom`), `resetPlugins`. | M |
 | E2 | ✅ Built (3.5). **Storage adapter interface.** Async `SurveyStore`, `MemoryStore`, `WebStorageStore` (localStorage), `resumeSession()`. | S |
 | E3 | ✅ Built (3.5). **i18n.** Question and definition `translations`, `defaultLocale`, locale from `context.locale` with `fr-CA` to `fr` fallback; `getQuestionText`, `getAnswerText`, `getTitle`, `getDescription`. | M |
-| E4 | **UI bindings** as separate packages, starting with a React `useSurvey()` hook. | L |
+| E4 | ✅ Built (react 0.1). **UI bindings** as separate packages, starting with the React `useSurvey()` hook in `survey-skipper-react`. | L |
 
 ### Service and UI (decided: build all three, in one repo)
 
