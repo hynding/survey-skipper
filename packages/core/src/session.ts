@@ -1,7 +1,8 @@
-import { Answer, type AnswerInput } from './answer';
+import { Answer, type AnswerInput, type AnswerValue } from './answer';
 import { SCHEMA_VERSION, SurveyDefinition, type SurveyDefinitionInput } from './definition';
 import type { Question, QuestionId } from './question';
 import { evaluate, type RuleData } from './rules';
+import { validateAnswer, type ValidationError } from './validation';
 import { isNil } from './utils';
 
 /** A respondent's progress through a survey. Restores a {@link SurveySession}; {@link SurveySession.toJSON} produces it. */
@@ -108,7 +109,7 @@ export class SurveySession {
 
   /** The data rules are evaluated against when leaving `question`. Abandoned answers are not included. */
   getRuleData(question?: Question | null): RuleData {
-    const answers: Record<string, string | number> = {};
+    const answers: Record<string, AnswerValue> = {};
     for (const [id, answer] of Object.entries(this.answers)) {
       if (answer.isValid()) {
         answers[id] = answer.value;
@@ -141,7 +142,31 @@ export class SurveySession {
     return this.questions[this.index] ?? null;
   }
 
-  /** Answers the current question, or `futureQuestion` when given (a pre-answer). */
+  /**
+   * Validates and stores an answer to the current question, or to `question` when given. Invalid answers are not
+   * stored. Returns the validation errors, which are empty on success. Use {@link setAnswer} to store without
+   * checking.
+   */
+  answer(answer: Answer | AnswerInput, question?: Question): { ok: boolean; errors: ValidationError[] } {
+    this.settle();
+    const target = question ?? this.getQuestion();
+    if (!target) {
+      return { ok: false, errors: [] };
+    }
+    const errors = validateAnswer(target, answer);
+    if (errors.length === 0) {
+      this.setAnswer(answer, target);
+    }
+    return { ok: errors.length === 0, errors };
+  }
+
+  /** Validates the stored answer to the current question, or to `question` when given. */
+  validate(question?: Question): ValidationError[] {
+    const target = question ?? this.getQuestion();
+    return target ? validateAnswer(target, this.answers[String(target.id)]) : [];
+  }
+
+  /** Answers the current question, or `futureQuestion` when given (a pre-answer), without validating. */
   setAnswer(answer: Answer | AnswerInput, futureQuestion?: Question): this {
     this.settle();
     const q = futureQuestion ?? this.getQuestion();
