@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { Given, Then, When } from '@cucumber/cucumber';
-import { Survey, type SurveyInput } from '../../src';
+import { SurveyDefinition, SurveySession, type SessionState, type SurveyDefinitionInput } from '../../src';
 import { getNewQuestions } from '../support/generator';
 import { findAnswer } from '../support/helpers';
 import type { SurveyWorld } from '../support/world';
@@ -8,7 +8,9 @@ import type { SurveyWorld } from '../support/world';
 Given(
   'a {int} question survey of {word} or {word} answers that discards abandoned answers',
   function (this: SurveyWorld, length: number, a: string, b: string) {
-    this.survey = new Survey({ questions: getNewQuestions(length, [a, b]), keepAbandonedAnswers: false });
+    this.survey = new SurveySession(
+      new SurveyDefinition({ questions: getNewQuestions(length, [a, b]), keepAbandonedAnswers: false }),
+    );
   },
 );
 
@@ -17,10 +19,9 @@ When('I go back', function (this: SurveyWorld) {
 });
 
 When('the survey and its navigation are saved to JSON and restored', function (this: SurveyWorld) {
-  const { questions, answers, answerMap, history, forward, abandonedAnswers } = this.currentSurvey;
-  const currentQuestionId = this.currentSurvey.getQuestion()?.id;
-  const saved = JSON.stringify({ questions, answers, answerMap, history, forward, abandonedAnswers, currentQuestionId });
-  this.survey = new Survey(JSON.parse(saved) as SurveyInput);
+  const definition = JSON.parse(JSON.stringify(this.currentSurvey.definition)) as SurveyDefinitionInput;
+  const state = JSON.parse(JSON.stringify(this.currentSurvey)) as SessionState;
+  this.survey = new SurveySession(new SurveyDefinition(definition), state);
 });
 
 Then('I am not moved', function (this: SurveyWorld) {

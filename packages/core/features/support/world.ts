@@ -1,14 +1,14 @@
 import { setWorldConstructor, World } from '@cucumber/cucumber';
-import type { Question, Survey } from '../../src';
+import type { Question, SurveySession } from '../../src';
 
 export class SurveyWorld extends World {
-  survey: Survey | null = null;
+  survey: SurveySession | null = null;
   actualQuestion: Question | null = null;
   actualQuestions: Question[] | null = null;
   error: unknown = null;
 
   /** The survey created by a Given step; fails the step if there is none. */
-  get currentSurvey(): Survey {
+  get currentSurvey(): SurveySession {
     if (!this.survey) {
       throw new Error('No survey has been created in this scenario');
     }

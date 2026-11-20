@@ -1,12 +1,18 @@
 import { parse, stringify } from 'yaml';
-import { Survey, type Answer, type Question, type SurveyInput } from 'survey-skipper';
+import {
+  SurveyDefinition,
+  SurveySession,
+  type Answer,
+  type Question,
+  type SurveyDefinitionInput,
+} from 'survey-skipper';
 
 /**
- * Parses a survey written in YAML into the plain input `new Survey(...)` accepts.
+ * Parses a survey written in YAML into the plain input `new SurveyDefinition(...)` accepts.
  * Rules and `showIf` conditions are JsonLogic written as YAML maps.
  * Throws a `TypeError` if the document is not a mapping with a `questions` list.
  */
-export function parseSurvey(text: string): SurveyInput {
+export function parseSurvey(text: string): SurveyDefinitionInput {
   const doc: unknown = parse(text);
   if (doc === null || typeof doc !== 'object' || Array.isArray(doc)) {
     throw new TypeError('A survey document must be a YAML mapping');
@@ -14,25 +20,27 @@ export function parseSurvey(text: string): SurveyInput {
   if (!('questions' in doc) || !Array.isArray(doc.questions)) {
     throw new TypeError('A survey document needs a "questions" list');
   }
-  return doc as SurveyInput;
+  return doc as SurveyDefinitionInput;
 }
 
-/** Parses a YAML survey and returns a ready-to-run {@link Survey}. */
-export function loadSurvey(text: string): Survey {
-  return new Survey(parseSurvey(text));
+/** Parses a YAML survey into a {@link SurveyDefinition}. Start respondents on it with `new SurveySession(definition)`. */
+export function loadSurvey(text: string): SurveyDefinition {
+  return new SurveyDefinition(parseSurvey(text));
 }
 
 /**
- * Writes a survey's definition (metadata, questions, answer options, rules, `showIf` and answer map) as YAML.
- * Respondent state such as answers, history and context is left out.
+ * Writes a survey definition (metadata, questions, answer options, rules, `showIf` / `skipIf` and answer map) as
+ * YAML. Given a session, writes its definition; respondent state such as answers, history and context is left out.
  */
-export function stringifySurvey(survey: Survey | SurveyInput): string {
-  const s = survey instanceof Survey ? survey : new Survey(survey);
+export function stringifySurvey(survey: SurveyDefinition | SurveySession | SurveyDefinitionInput): string {
+  const s = survey instanceof SurveySession ? survey.definition : SurveyDefinition.from(survey);
   const definition = compact({
     id: s.id,
+    version: s.version,
     title: s.title,
     description: s.description,
     customKey: s.customKey === '*' ? undefined : s.customKey,
+    keepAbandonedAnswers: s.keepAbandonedAnswers ? undefined : false,
     questions: s.questions.map(questionDefinition),
     answerMap: Object.keys(s.answerMap).length > 0 ? s.answerMap : undefined,
   });
@@ -45,6 +53,7 @@ function questionDefinition(q: Question): Record<string, unknown> {
     text: q.text,
     answers: q.answers.length > 0 ? q.answers.map(answerDefinition) : undefined,
     showIf: q.showIf,
+    skipIf: q.skipIf,
     rules: q.rules.length > 0 ? q.rules : undefined,
   });
 }

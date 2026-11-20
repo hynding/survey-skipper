@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { Given, Then, When } from '@cucumber/cucumber';
-import { Answer, Question, Survey, type QuestionInput } from '../../src';
+import { Answer, Question, SurveyDefinition, SurveySession, type QuestionInput } from '../../src';
 import { getNewSurvey } from '../support/generator';
 import { findAnswer } from '../support/helpers';
 import type { SurveyWorld } from '../support/world';
@@ -21,8 +21,7 @@ Given(
 );
 
 Given('a survey whose question ids are numbers starting at 0', function (this: SurveyWorld) {
-  this.survey = new Survey({
-    questions: [0, 1, 2].map((id) => new Question({ id })),
+  this.survey = new SurveySession(new SurveyDefinition({ questions: [0, 1, 2].map((id) => new Question({ id })) }), {
     currentQuestionId: 2,
   });
 });
@@ -39,7 +38,7 @@ When('I answer those questions with {word}', function (this: SurveyWorld, value:
 When(
   'I map an empty answer on question {int} to question {int}',
   function (this: SurveyWorld, a: number, b: number) {
-    capture(this, () => this.currentSurvey.mapAnswer(this.question(a), new Answer({ value: '' }), this.question(b)));
+    capture(this, () => this.currentSurvey.definition.mapAnswer(this.question(a), new Answer({ value: '' }), this.question(b)));
   },
 );
 
@@ -47,7 +46,7 @@ When(
   'I map question {int} answer {word} to a question outside the survey',
   function (this: SurveyWorld, a: number, value: string) {
     const from = this.question(a);
-    capture(this, () => this.currentSurvey.mapAnswer(from, findAnswer(from, value), new Question({ id: 'elsewhere' })));
+    capture(this, () => this.currentSurvey.definition.mapAnswer(from, findAnswer(from, value), new Question({ id: 'elsewhere' })));
   },
 );
 
@@ -60,9 +59,9 @@ When('I create a question without an id', function (this: SurveyWorld) {
 });
 
 When('the survey is saved to JSON and restored', function (this: SurveyWorld) {
-  const { questions, answers, answerMap } = this.currentSurvey;
-  const saved = JSON.stringify({ questions, answers, answerMap, currentQuestionId: this.currentSurvey.getQuestion()?.id });
-  this.survey = new Survey(JSON.parse(saved) as ConstructorParameters<typeof Survey>[0]);
+  const saved = JSON.stringify({ definition: this.currentSurvey.definition, session: this.currentSurvey });
+  const { definition, session } = JSON.parse(saved) as { definition: SurveyDefinition; session: SurveySession };
+  this.survey = new SurveySession(new SurveyDefinition(definition), session);
 });
 
 Then('I am returned questions {int} through {int}', function (this: SurveyWorld, first: number, last: number) {
