@@ -107,6 +107,36 @@ result; // => { ok: false, errors: [{ code: 'max', message: 'Must be at most 120
   answers are lists, which rules can test with `{ "in": ["dog", { "var": "answer" }] }`. In the answer map, a list
   answer's key is its values joined with `,`.
 
+### Pages, piped text and events
+
+**Pages.** Give consecutive questions the same `section` to show them together. `session.getPage()` returns the current
+question plus the following questions in its section along the route the current answers lead to, leaving out hidden
+ones. Call it again after each answer, since an answer can show, hide or jump past questions on the same page.
+`session.nextPage()` moves past the page and returns the next one; going back from there returns to the first question
+of the page you left.
+
+```ts
+let page = session.getPage();        // => [q1, q3]  (q2 is hidden until q1 is answered)
+session.answer({ value: 'yes' }, q1);
+page = session.getPage();            // => [q1, q2, q3]
+session.answer({ value: 'Volvo' }, q2);
+session.nextPage();                  // => the next section's questions
+```
+
+**Piped text.** Question text can include `{{answers.<id>}}`, `{{context.<key>}}` and `{{answer}}`.
+`session.getQuestionText(question?)` fills them in; `session.renderText(template)` does the same for any string. Lists
+are joined with `, ` and missing values become empty text.
+
+**Events.** `session.on(event, listener)` returns a function that removes the listener.
+
+| Event | Payload | When |
+| --- | --- | --- |
+| `answer` | `{ question, answer }` | An answer was stored |
+| `invalid` | `{ question, errors }` | `answer()` rejected an answer |
+| `navigate` | `{ from, to }` | The session moved forward (`to` is `null` at the end) |
+| `back` | `{ from, to }` | The session went back |
+| `complete` | `{ ending }` | The session finished |
+
 ### Going back
 
 `session.back()` returns to the previous question the respondent was shown (or `null` at the start; check with
@@ -139,8 +169,8 @@ ran against.
   (default `'*'`) for custom answers.
 - **Pre-answers**: `session.setAnswer(answer, laterQuestion)` answers a later question now. When the session reaches it,
   it is routed past, but its own rules and mapping still decide where to go next.
-- **Batches**: `getNextQuestions(n)` returns up to `n` consecutive questions; `setAnswers(answers)` answers them in
-  order. Only the last answer's routing affects what comes next.
+- **Batches** (older than pages): `getNextQuestions(n)` returns up to `n` consecutive questions; `setAnswers(answers)`
+  answers them in order. Only the last answer's routing affects what comes next. Prefer `section` and `getPage()`.
 - `getNextQuestion()` returns `null` when the session is finished, including when answered questions route in a loop
   with nowhere left to go.
 

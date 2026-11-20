@@ -53,6 +53,7 @@ function questionDefinition(q: Question): Record<string, unknown> {
     text: q.text,
     answers: q.answers.length > 0 ? q.answers.map(answerDefinition) : undefined,
     type: q.type,
+    section: q.section,
     required: q.required ? true : undefined,
     validation: Object.keys(q.validation).length > 0 ? q.validation : undefined,
     showIf: q.showIf,

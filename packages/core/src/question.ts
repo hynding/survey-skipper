@@ -42,6 +42,8 @@ export interface QuestionInput {
   /** When set, the question is routed past without being asked if this condition holds. */
   skipIf?: Condition;
   type?: QuestionType;
+  /** Consecutive questions with the same section form one page. See `SurveySession.getPage`. */
+  section?: string;
   /** Whether an answer is needed before moving on. Checked by `SurveySession.answer` and `validate`. */
   required?: boolean;
   validation?: ValidationRules;
@@ -55,10 +57,11 @@ export class Question {
   showIf: Condition | undefined;
   skipIf: Condition | undefined;
   type: QuestionType | undefined;
+  section: string | undefined;
   required: boolean;
   validation: ValidationRules;
 
-  constructor({ id, text, answers = [], rules = [], showIf, skipIf, type, required = false, validation = {} }: QuestionInput) {
+  constructor({ id, text, answers = [], rules = [], showIf, skipIf, type, section, required = false, validation = {} }: QuestionInput) {
     if (isNil(id)) {
       throw new TypeError('Question requires an id');
     }
@@ -69,6 +72,7 @@ export class Question {
     this.showIf = showIf;
     this.skipIf = skipIf;
     this.type = type;
+    this.section = section;
     this.required = required;
     this.validation = { ...validation };
   }
