@@ -9,10 +9,9 @@
   },
   "scripts": {
     "build": "pnpm -r run build",
-    "typecheck": "tsc --noEmit && pnpm -r run typecheck",
-    "lint": "pnpm -r run lint",
     "test": "pnpm -r run test",
-    "check": "pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run build"
+    "lint": "pnpm -r run lint",
+    "check": "tsc --noEmit && pnpm -r run check"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

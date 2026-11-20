@@ -1,5 +1,6 @@
 import { Answer, type AnswerInput } from './answer';
 import { Question, type QuestionId, type QuestionInput } from './question';
+import { assertRuleShape, evaluate, type Rule, type RuleData } from './rules';
 import { isNil } from './utils';
 
 /**
@@ -30,6 +31,10 @@ export interface SurveyInput {
    * {@link Survey.abandonedAnswers} (`true`, the default) or discard them (`false`).
    */
   keepAbandonedAnswers?: boolean;
+  /** Facts about the respondent or situation that rules can read as `context.*`. */
+  context?: Record<string, unknown>;
+  /** The named ending the survey finished on, if any. Restores {@link Survey.ending}. */
+  ending?: string;
 }
 
 export class Survey {
@@ -54,6 +59,10 @@ export class Survey {
    */
   abandonedAnswers: Record<string, Answer>;
   keepAbandonedAnswers: boolean;
+  /** Facts about the respondent or situation that rules can read as `context.*`. Can change mid-survey. */
+  context: Record<string, unknown>;
+  /** The named ending a rule finished the survey on, or `undefined` if it is unfinished or ran off the end. */
+  ending: string | undefined;
   /** Position of the current question in `questions`. Equal to `questions.length` once finished. */
   index = 0;
   private readonly idMap = new Map<string, number>();
@@ -71,6 +80,8 @@ export class Survey {
     forward = [],
     abandonedAnswers = {},
     keepAbandonedAnswers = true,
+    context = {},
+    ending,
   }: SurveyInput = {}) {
     this.id = id;
     this.title = title;
@@ -87,6 +98,8 @@ export class Survey {
       Object.entries(abandonedAnswers).map(([questionId, answer]) => [questionId, Answer.from(answer)]),
     );
     this.keepAbandonedAnswers = keepAbandonedAnswers;
+    this.context = { ...context };
+    this.ending = ending;
 
     this.mapIndices(currentQuestionId);
   }
@@ -115,6 +128,43 @@ export class Survey {
     this.answerMap[key] ??= {};
     this.answerMap[key][this.getAnswerKey(answer)] = toQuestion.id;
     return this;
+  }
+
+  /**
+   * Adds a branching rule to `question`, after its existing rules.
+   * Throws a `TypeError` unless the rule has exactly one of `goTo` or `end`, and a `RangeError` if either
+   * question is not part of this survey.
+   */
+  addRule(question: Question, rule: Rule): this {
+    assertRuleShape(rule);
+    const index = this.indexOf(question.id);
+    const own = index === undefined ? undefined : this.questions[index];
+    if (!own) {
+      throw new RangeError(`Question "${String(question.id)}" is not part of this survey`);
+    }
+    if (!isNil(rule.goTo) && this.indexOf(rule.goTo) === undefined) {
+      throw new RangeError(`Question "${String(rule.goTo)}" is not part of this survey`);
+    }
+    own.rules.push({ ...rule });
+    return this;
+  }
+
+  /** Replaces the survey's context. Later routing decisions use the new values. */
+  setContext(context: Record<string, unknown>): this {
+    this.context = { ...context };
+    return this;
+  }
+
+  /** The data rules are evaluated against when leaving `question`. Abandoned answers are not included. */
+  getRuleData(question?: Question | null): RuleData {
+    const answers: Record<string, string | number> = {};
+    for (const [id, answer] of Object.entries(this.answers)) {
+      if (answer.isValid()) {
+        answers[id] = answer.value;
+      }
+    }
+    const own = question ? answers[String(question.id)] : undefined;
+    return { answers, context: this.context, answer: own ?? null };
   }
 
   /**
@@ -152,6 +202,7 @@ export class Survey {
     const start = this.getQuestion();
     if (start) {
       this.history.push(start.id);
+      this.ending = undefined;
     }
     const next = this.advance(start);
     this.reconcileForward(next);
@@ -177,6 +228,7 @@ export class Survey {
     if (current) {
       this.forward.push(current.id);
     }
+    this.ending = undefined;
     return this.getQuestion(previousId);
   }
 
@@ -228,11 +280,19 @@ export class Survey {
       visited.add(this.index);
       this.index = this.nextIndexFrom(q);
       q = this.getQuestion();
-      if (!q || !this.isPreAnswered(q)) {
+      if (!q) {
+        return null;
+      }
+      if (this.isShown(q) && !this.isPreAnswered(q)) {
         return q;
       }
     }
     return null;
+  }
+
+  /** A question whose `showIf` condition fails is routed past without being asked. */
+  private isShown(q: Question): boolean {
+    return evaluate(q.showIf, this.getRuleData(q));
   }
 
   /** A question with a valid answer the respondent has not been shown yet is skipped. */
@@ -270,7 +330,27 @@ export class Survey {
     return this.idMap.get(String(id));
   }
 
+  /**
+   * Where to go after `q`: the first matching rule (rules with an unknown target are ignored), then the answer map,
+   * then the next question in order. An `end` rule moves past the last question and records the ending.
+   */
   private nextIndexFrom(q: Question): number {
+    if (q.rules.length > 0) {
+      const data = this.getRuleData(q);
+      for (const rule of q.rules) {
+        if (!evaluate(rule.if, data)) {
+          continue;
+        }
+        if (typeof rule.end === 'string' && rule.end.length > 0) {
+          this.ending = rule.end;
+          return this.questions.length;
+        }
+        const target = isNil(rule.goTo) ? undefined : this.indexOf(rule.goTo);
+        if (target !== undefined) {
+          return target;
+        }
+      }
+    }
     const answer = this.answers[String(q.id)];
     const targetId = answer?.isValid() ? this.answerMap[String(q.id)]?.[this.getAnswerKey(answer)] : undefined;
     const target = targetId === undefined ? undefined : this.indexOf(targetId);

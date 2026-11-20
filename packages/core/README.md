@@ -31,6 +31,53 @@ survey.setAnswer(new Answer({ value: 'no' }));
 survey.getNextQuestion(); // => q3
 ```
 
+### Rules and context
+
+Questions can carry ordered branching rules written in [JsonLogic](https://jsonlogic.com). When the survey leaves a
+question, the first rule whose `if` holds decides where to go: `goTo` a question, or `end` the survey with a named
+ending. A rule without `if` always matches. If no rule matches, the answer map applies, then the next question in order.
+
+```ts
+const survey = new Survey({
+  context: { role: 'manager' },
+  questions: [
+    {
+      id: 'age',
+      rules: [
+        { if: { '<': [{ var: 'answer' }, 18] }, end: 'too_young' },
+        { if: { '>=': [{ var: 'answer' }, 65] }, goTo: 'retired' },
+      ],
+    },
+    { id: 'team', showIf: { '==': [{ var: 'context.role' }, 'manager'] } },
+    { id: 'retired' },
+  ],
+});
+
+survey.setAnswer({ value: 12 });
+survey.getNextQuestion(); // => null
+survey.ending;            // => 'too_young'
+```
+
+Conditions are evaluated against:
+
+| Path | Value |
+| --- | --- |
+| `answer` | The answer to the question being left, or `null`. |
+| `answers.<questionId>` | Any valid answer so far. Abandoned answers are not included. |
+| `context.<key>` | The survey's `context`. Change it any time with `setContext()`. |
+
+Beyond the standard JsonLogic operators, two are registered: `{ "answered": "q1" }` and
+`{ "matches": [value, "regex"] }`. These are added to the shared `json-logic-js` instance, so they are also visible to
+other code using that library.
+
+- `showIf` hides a question when its condition fails: the survey routes past it (its rules still apply) without asking
+  it. The first question is always shown.
+- `addRule(question, rule)` adds a rule in code. It throws a `TypeError` unless the rule has exactly one of `goTo` or
+  `end`, and a `RangeError` for a question outside the survey. Rules loaded from JSON with an unknown `goTo` are
+  ignored.
+- Question ids are read as JsonLogic paths, so ids containing `.` cannot be referenced in `answers.<id>`.
+- To write surveys in YAML, use [`survey-skipper-yaml`](../yaml).
+
 ### Concepts
 
 - **Answer map**: `answerMap[fromQuestionId][answerKey] = toQuestionId`. The key is the answer's value, or the survey's
@@ -45,8 +92,8 @@ survey.getNextQuestion(); // => q3
   answers on the route they left move from `answers` to `abandonedAnswers`, so they no longer route or skip but are not
   lost. Pass `keepAbandonedAnswers: false` to discard them instead. `getPath()` lists the questions shown so far.
 - **Persistence**: a survey's `questions`, `answers` and `answerMap` can be saved as JSON and passed back to
-  `new Survey({...})`, along with `currentQuestionId`. Save `history`, `forward` and `abandonedAnswers` too to keep
-  navigation state. Plain objects are turned back into `Question` / `Answer`
+  `new Survey({...})`, along with `currentQuestionId`. Questions keep their `rules` and `showIf`. Save `history`,
+  `forward` and `abandonedAnswers` too to keep navigation state, and `context` and `ending` for rule state. Plain objects are turned back into `Question` / `Answer`
   instances.
 - `getNextQuestion()` returns `null` when the survey is finished, including when pre-answered questions route in a
   loop with nowhere left to go.

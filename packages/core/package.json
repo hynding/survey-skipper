@@ -1,6 +1,6 @@
 {
   "name": "survey-skipper",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "A simple but smart survey system agnostic of service implementation details",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -37,6 +37,10 @@
   "homepage": "https://github.com/hynding/survey-skipper#readme",
   "type": "commonjs",
   "devDependencies": {
-    "@cucumber/cucumber": "^13.3.0"
+    "@cucumber/cucumber": "^13.3.0",
+    "@types/json-logic-js": "^2.0.8"
+  },
+  "dependencies": {
+    "json-logic-js": "^2.0.5"
   }
 }

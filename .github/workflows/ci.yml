@@ -19,7 +19,5 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run typecheck
-      - run: pnpm run lint
-      - run: pnpm run test
-      - run: pnpm run build
+      # Runs each package's typecheck, lint, test and build in dependency order.
+      - run: pnpm run check

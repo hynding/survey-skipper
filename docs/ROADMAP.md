@@ -1,7 +1,7 @@
 # Survey Skipper roadmap
 
-Status: decisions answered on 2026-11-20 (see section 5). **C2 (history and Back navigation) is built.** Other items
-are still proposals.
+Status: decisions answered on 2026-11-20 (see section 5). **Built: C2 (Back navigation), P1 (pnpm monorepo), R1, R2, R3,
+R4 and R6 (JsonLogic rules, context, showIf, named endings, YAML package).** Other items are still proposals.
 
 Goal of the project: **create, manage, track, share and extend customizable surveys whose path branches on rules and
 context.** This plan maps that goal onto the library as it stands at v2.0.0 (strict TypeScript, PR #1).
@@ -47,12 +47,12 @@ Grouped by the goal's verbs. Scope: **S** is about a day, **M** a few days, **L*
 
 | ID | Feature | Scope |
 | --- | --- | --- |
-| R1 | **Rule engine.** Ordered rules per question: `{ when: Condition, goTo: questionId | 'END' }`, first match wins, then a `default`. The current `answerMap` compiles into rules, so old surveys keep working. | M |
-| R2 | **Condition language: JsonLogic**, authorable in JSON or YAML. Standard operators (`==`, `in`, `<`, `and`, `or`, `!`, `var`...) plus a few registered ones (`answered`, `skipped`, `matches`). Conditions read any answer via `{ "var": "answers.q1" }`. Uses `json-logic-js` (core's first runtime dependency); YAML parsing lives in a separate entry point so the core stays small. | M |
-| R3 | **Context.** A session takes a `context` object (role, locale, plan, experiment bucket...). Conditions read it via `{ var: 'context.role' }`. Context can change mid-session. | S |
-| R4 | **Display conditions.** `showIf` / `skipIf` on a question, evaluated when the session reaches it. Many surveys are easier to write this way than as jumps. | S |
+| R1 | ✅ Built (2.2). **Rule engine.** Ordered `rules` on each question: `{ if?, goTo }` or `{ if?, end }`, first match wins; the `answerMap` still applies after rules, then the next question. Rules live on the current `Survey`; they move to `SurveyDefinition` with C1. | M |
+| R2 | ✅ Built (2.2). **Condition language: JsonLogic** via `json-logic-js` (core's first runtime dependency). Data: `answer`, `answers.<id>`, `context.<key>`. Extra operators: `answered`, `matches`. YAML authoring in the `survey-skipper-yaml` package. Not yet: a `skipped` operator. | M |
+| R3 | ✅ Built (2.2). **Context.** `context` on the survey, readable as `context.*`, replaceable mid-survey with `setContext()`. | S |
+| R4 | ✅ Built (2.2) as `showIf`. **Display conditions.** A hidden question is routed past without being asked. Not yet: `skipIf`, and `showIf` on the first question. | S |
 | R5 | **Computed variables and scoring.** Named expressions (`score = sum of answers in section A`) usable in conditions, piping and results. | M |
-| R6 | **End states.** Multiple named endings (`qualified`, `screened_out`) reachable from rules, returned on completion. | S |
+| R6 | ✅ Built (2.2). **End states.** `{ end: 'qualified' }` rules finish the survey and set `survey.ending`. | S |
 
 ### Create (authoring)
 
