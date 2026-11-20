@@ -19,6 +19,17 @@ export interface SurveyInput {
   answerMap?: AnswerMap;
   /** Key used in the answer map for custom answers. Defaults to `'*'`. */
   customKey?: string;
+  /** Questions already shown and moved past, oldest first. Restores {@link Survey.history}. */
+  history?: QuestionId[];
+  /** Questions stepped back over, next one last. Restores {@link Survey.forward}. */
+  forward?: QuestionId[];
+  /** Answers left behind on a path the respondent no longer takes. Restores {@link Survey.abandonedAnswers}. */
+  abandonedAnswers?: Record<string, Answer | AnswerInput>;
+  /**
+   * When going back and taking a different route leaves answered questions off the path, keep those answers in
+   * {@link Survey.abandonedAnswers} (`true`, the default) or discard them (`false`).
+   */
+  keepAbandonedAnswers?: boolean;
 }
 
 export class Survey {
@@ -29,6 +40,20 @@ export class Survey {
   answers: Record<string, Answer>;
   answerMap: AnswerMap;
   customKey: string;
+  /** Questions the respondent was shown and moved past, oldest first. Pre-answered questions that were skipped are not included. */
+  history: QuestionId[];
+  /**
+   * Questions stepped back over with {@link back}, the next one last. Moving forward along the same route
+   * consumes them; taking a different route abandons them.
+   */
+  forward: QuestionId[];
+  /**
+   * Answers to questions that are no longer on the respondent's path, keyed by question id. They are not used
+   * for routing or skipping. If the respondent reaches the question again, it is asked again, and answering it
+   * removes the entry here.
+   */
+  abandonedAnswers: Record<string, Answer>;
+  keepAbandonedAnswers: boolean;
   /** Position of the current question in `questions`. Equal to `questions.length` once finished. */
   index = 0;
   private readonly idMap = new Map<string, number>();
@@ -42,6 +67,10 @@ export class Survey {
     currentQuestionId,
     answerMap = {},
     customKey,
+    history = [],
+    forward = [],
+    abandonedAnswers = {},
+    keepAbandonedAnswers = true,
   }: SurveyInput = {}) {
     this.id = id;
     this.title = title;
@@ -52,6 +81,12 @@ export class Survey {
     );
     this.answerMap = answerMap;
     this.customKey = customKey?.length ? customKey : '*';
+    this.history = [...history];
+    this.forward = [...forward];
+    this.abandonedAnswers = Object.fromEntries(
+      Object.entries(abandonedAnswers).map(([questionId, answer]) => [questionId, Answer.from(answer)]),
+    );
+    this.keepAbandonedAnswers = keepAbandonedAnswers;
 
     this.mapIndices(currentQuestionId);
   }
@@ -97,7 +132,9 @@ export class Survey {
   setAnswer(answer: Answer | AnswerInput, futureQuestion?: Question): this {
     const q = futureQuestion ?? this.getQuestion();
     if (q) {
-      this.answers[String(q.id)] = Answer.from(answer);
+      const key = String(q.id);
+      this.answers[key] = Answer.from(answer);
+      Reflect.deleteProperty(this.abandonedAnswers, key);
     }
     return this;
   }
@@ -112,21 +149,46 @@ export class Survey {
    * (including when pre-answered questions route in a loop with nowhere left to go).
    */
   getNextQuestion(): Question | null {
-    const visited = new Set<number>();
-    let q = this.getQuestion();
-    while (q) {
-      if (visited.has(this.index)) {
-        this.index = this.questions.length;
-        return null;
-      }
-      visited.add(this.index);
-      this.index = this.nextIndexFrom(q);
-      q = this.getQuestion();
-      if (!q || !this.answers[String(q.id)]?.isValid()) {
-        return q;
-      }
+    const start = this.getQuestion();
+    if (start) {
+      this.history.push(start.id);
     }
-    return null;
+    const next = this.advance(start);
+    this.reconcileForward(next);
+    return next;
+  }
+
+  /** Whether {@link back} has a question to return to. */
+  canGoBack(): boolean {
+    return this.history.length > 0;
+  }
+
+  /**
+   * Returns to the previous question the respondent was shown and makes it current. Its answer, and the answers
+   * after it, are kept until the respondent takes a different route. Returns `null`, without moving, when there is
+   * nothing to go back to.
+   */
+  back(): Question | null {
+    const previousId = this.history.pop();
+    if (previousId === undefined) {
+      return null;
+    }
+    const current = this.getQuestion();
+    if (current) {
+      this.forward.push(current.id);
+    }
+    return this.getQuestion(previousId);
+  }
+
+  /** The questions shown so far, in order, ending with the current question if there is one. */
+  getPath(): Question[] {
+    const current = this.getQuestion();
+    const ids = current ? [...this.history, current.id] : this.history;
+    return ids.flatMap((id) => {
+      const index = this.indexOf(id);
+      const q = index === undefined ? undefined : this.questions[index];
+      return q ? [q] : [];
+    });
   }
 
   /**
@@ -153,6 +215,55 @@ export class Survey {
       }
     });
     return this;
+  }
+
+  private advance(start: Question | null): Question | null {
+    const visited = new Set<number>();
+    let q = start;
+    while (q) {
+      if (visited.has(this.index)) {
+        this.index = this.questions.length;
+        return null;
+      }
+      visited.add(this.index);
+      this.index = this.nextIndexFrom(q);
+      q = this.getQuestion();
+      if (!q || !this.isPreAnswered(q)) {
+        return q;
+      }
+    }
+    return null;
+  }
+
+  /** A question with a valid answer the respondent has not been shown yet is skipped. */
+  private isPreAnswered(q: Question): boolean {
+    return !!this.answers[String(q.id)]?.isValid() && !this.forward.some((id) => String(id) === String(q.id));
+  }
+
+  /** Follows the stepped-back route while it matches, and abandons it once the route changes. */
+  private reconcileForward(next: Question | null): void {
+    if (this.forward.length === 0) {
+      return;
+    }
+    const expected = this.forward.at(-1);
+    if (next && expected !== undefined && String(expected) === String(next.id)) {
+      this.forward.pop();
+      return;
+    }
+    for (const id of this.forward) {
+      const key = String(id);
+      if (next && key === String(next.id)) {
+        continue;
+      }
+      const answer = this.answers[key];
+      if (answer) {
+        if (this.keepAbandonedAnswers) {
+          this.abandonedAnswers[key] = answer;
+        }
+        Reflect.deleteProperty(this.answers, key);
+      }
+    }
+    this.forward = [];
   }
 
   private indexOf(id: QuestionId): number | undefined {

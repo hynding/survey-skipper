@@ -39,8 +39,14 @@ survey.getNextQuestion(); // => q3
   skipped, but its own mapping still decides where to go next.
 - **Batches**: `getNextQuestions(n)` returns up to `n` consecutive questions; `setAnswers(answers)` answers them in order.
   Only the last answer's mapping affects what comes next.
+- **Going back**: `back()` returns to the previous question the respondent was shown (or `null` at the start;
+  check with `canGoBack()`). Answers are kept, so a UI can prefill them. Moving forward along the same route asks
+  those questions again rather than skipping them. If the respondent changes an answer and takes a different route,
+  answers on the route they left move from `answers` to `abandonedAnswers`, so they no longer route or skip but are not
+  lost. Pass `keepAbandonedAnswers: false` to discard them instead. `getPath()` lists the questions shown so far.
 - **Persistence**: a survey's `questions`, `answers` and `answerMap` can be saved as JSON and passed back to
-  `new Survey({...})`, along with `currentQuestionId`. Plain objects are turned back into `Question` / `Answer`
+  `new Survey({...})`, along with `currentQuestionId`. Save `history`, `forward` and `abandonedAnswers` too to keep
+  navigation state. Plain objects are turned back into `Question` / `Answer`
   instances.
 - `getNextQuestion()` returns `null` when the survey is finished, including when pre-answered questions route in a
   loop with nowhere left to go.
