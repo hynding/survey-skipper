@@ -22,6 +22,13 @@ builder (UI2).
 - Context comes from the link: `#/s/commute?employed=true&name=Ana` starts a session with
   `{ employed: true, name: "Ana" }`. JSON values are parsed, and anything else stays a string.
 
+## Results (`#/results/<id>`)
+
+A survey's results from the server's stats route: responses, completions and completion rate, completed responses by
+ending, and for each question how many people saw it, answered it and stopped there, with a bar for each answer.
+**Download CSV** saves every response (one row per respondent). Results need the server's API key when it has one;
+the key is shared with the builder for the tab. The survey list links to each survey's results.
+
 ## Run it
 
 ```sh

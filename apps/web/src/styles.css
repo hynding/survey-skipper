@@ -81,3 +81,18 @@ main:has(.builder) { max-width: 80rem; }
 .preview .actions button { font: inherit; padding: 0.5rem 1rem; border-radius: 0.5rem; border: 1px solid var(--accent); background: var(--accent); color: var(--card); }
 .preview .actions button[type='button'] { background: transparent; color: var(--accent); }
 .badge { margin-left: 0.5rem; font-size: 0.75rem; padding: 0.1rem 0.5rem; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.results h1 { font-size: 1.4rem; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0.75rem; margin: 1rem 0; }
+.tile { background: var(--card); border: 1px solid var(--line); border-radius: 0.75rem; padding: 0.75rem 1rem; display: flex; flex-direction: column; }
+.tile-value { font-size: 1.75rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.tile-label { color: var(--muted); font-size: 0.85rem; }
+.question-result { background: var(--card); border: 1px solid var(--line); border-radius: 0.75rem; padding: 0.75rem 1rem; margin-bottom: 0.75rem; }
+.question-result h3 { margin: 0 0 0.25rem; font-size: 1rem; }
+.meta { color: var(--muted); font-size: 0.85rem; margin: 0 0 0.5rem; }
+.bars { width: 100%; border-collapse: separate; border-spacing: 0 2px; table-layout: fixed; }
+.bars th { text-align: left; font-weight: normal; width: 35%; padding-right: 0.5rem; overflow-wrap: anywhere; }
+.bars .bar-cell { width: 45%; }
+.bars .bar { display: block; height: 0.9rem; min-width: 2px; background: var(--accent); border-radius: 0 4px 4px 0; }
+.bars .bar-value { width: 20%; padding-left: 0.5rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bars .bar-value small { color: var(--muted); }
+.results a { color: var(--accent); }

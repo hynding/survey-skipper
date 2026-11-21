@@ -37,7 +37,8 @@ export function Home({ api }: { api: Api }) {
           {s.accepting === false && s.reason ? <span className="badge">{REASONS[s.reason]}</span> : null}
           {s.description ? <p>{s.description}</p> : null}
           <small>
-            {s.questions} questions · <a href={`#/builder/${encodeURIComponent(String(s.id))}`}>Edit</a>
+            {s.questions} questions · <a href={`#/builder/${encodeURIComponent(String(s.id))}`}>Edit</a> ·{' '}
+            <a href={`#/results/${encodeURIComponent(String(s.id))}`}>Results</a>
           </small>
         </li>
       ))}
