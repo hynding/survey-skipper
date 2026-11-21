@@ -163,7 +163,7 @@ function checkCondition(
           issues.push({ severity: 'warning', code: 'unknown-reference', message: `${where} reads unknown question "${id}"`, ...at });
         }
       }
-    } else if (operator === 'answered' && (typeof args === 'string' || typeof args === 'number') && !ids.has(String(args))) {
+    } else if ((operator === 'answered' || operator === 'skipped') && (typeof args === 'string' || typeof args === 'number') && !ids.has(String(args))) {
       issues.push({ severity: 'warning', code: 'unknown-reference', message: `${where} checks unknown question "${String(args)}"`, ...at });
     } else if (operator === 'matches' && Array.isArray(args) && typeof args[1] === 'string' && !isRegExp(args[1])) {
       issues.push({ severity: 'error', code: 'invalid-pattern', message: `${where} uses an invalid regular expression`, ...at });

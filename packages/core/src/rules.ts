@@ -11,6 +11,8 @@ import { isNil } from './utils.js';
  * Besides the standard operators, survey-skipper registers:
  * - `answered`: `{ "answered": "q1" }` is true when question `q1` has a valid answer.
  * - `matches`: `{ "matches": [{ "var": "answer" }, "^\\d{5}$"] }` tests a value against a regular expression.
+ * - `skipped`: `{ "skipped": "q1" }` is true when question `q1` was routed past without being asked (hidden by
+ *   `showIf` / `skipIf`, already answered, or carrying no options), on the respondent's current route.
  */
 export type Condition = boolean | { [operator: string]: unknown };
 
@@ -39,6 +41,8 @@ export interface RuleData {
   score?: number;
   /** Score totals by section. */
   scores?: Record<string, number>;
+  /** Ids of questions routed past without being asked on the current route, for the `skipped` operator. */
+  skipped?: string[];
 }
 
 jsonLogic.add_operation('matches', (value: unknown, pattern: unknown): boolean => {
@@ -52,6 +56,10 @@ jsonLogic.add_operation('matches', (value: unknown, pattern: unknown): boolean =
 jsonLogic.add_operation('answered', function (this: Partial<RuleData> | undefined, id: unknown): boolean {
   const answers = this?.answers;
   return !!answers && (typeof id === 'string' || typeof id === 'number') && Object.hasOwn(answers, String(id));
+});
+
+jsonLogic.add_operation('skipped', function (this: Partial<RuleData> | undefined, id: unknown): boolean {
+  return (typeof id === 'string' || typeof id === 'number') && (this?.skipped ?? []).includes(String(id));
 });
 
 /** Evaluates a condition. Anything JsonLogic considers truthy counts as a match. */

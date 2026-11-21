@@ -64,8 +64,11 @@ Conditions are evaluated against:
 | `answer` | The answer to the question being left, or `null`. |
 | `answers.<questionId>` | Any valid answer so far. Abandoned answers are not included. |
 | `context.<key>` | The session's `context`. Change it any time with `setContext()`. |
+| `vars.<name>` | A computed variable (see below). |
+| `score`, `scores.<section>` | The respondent's score (see Scoring). |
 
-Beyond the standard JsonLogic operators, two are registered: `{ "answered": "q1" }` and
+Beyond the standard JsonLogic operators, three are registered: `{ "answered": "q1" }`, `{ "skipped": "q1" }` (true when
+`q1` was routed past without being asked on the respondent's current route; `session.getSkipped()` lists them) and
 `{ "matches": [value, "regex"] }`. They are added to the shared `json-logic-js` instance, so other code using that
 library sees them too.
 
