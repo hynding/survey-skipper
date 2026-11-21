@@ -55,6 +55,8 @@ export {
 export type { QuestionOptions } from './builder.js';
 export { aggregate, timeOnQuestions } from './analytics.js';
 export type { QuestionStats, SurveyStats } from './analytics.js';
+export { toCSV, toRows } from './responses.js';
+export type { CellValue, ExportableSession, ExportOptions, ResponseRow, ResponseTable } from './responses.js';
 export { migrateSession } from './versioning.js';
 export type { MigrationReport } from './versioning.js';
 export {

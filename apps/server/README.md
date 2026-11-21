@@ -43,6 +43,8 @@ All bodies are JSON. 🔑 marks creator routes that need the API key when one is
 | `POST /definitions/:id/sessions` | Start a session. Body: `{ context?, version? }`. Returns a session view (201). |
 | 🔑 `GET /definitions/:id/sessions` | Saved sessions for a definition. |
 | 🔑 `GET /definitions/:id/stats?version=` | `aggregate()` over its sessions: completion, endings, distributions, drop-off, paths. |
+| 🔑 `GET /definitions/:id/responses.csv` | One row per session as CSV (`toCSV()`), as a download. Query: `version`, and `abandoned=1`, `timings=1`, `context=1` for extra columns. |
+| 🔑 `GET /definitions/:id/responses.json` | The same as `{ columns, rows }` (`toRows()`). |
 | `GET /sessions/:sid` | The session view. |
 | `POST /sessions/:sid/answers` | Answer. Body: `{ value, questionId?, text? }`, current question by default. 422 with `errors` if invalid. |
 | `POST /sessions/:sid/next` | Validate the current page and move on. 422 with `errors` if anything is missing or invalid. |

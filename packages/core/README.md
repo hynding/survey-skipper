@@ -186,6 +186,12 @@ ran against.
 - **Aggregation:** `aggregate(sessions)` takes live sessions or saved session JSON and returns completion counts and
   rate, endings, per-question `shown` / `answered` / `droppedOff` counts and answer `distribution`, and the most common
   routes.
+- **Export:** `toRows(definition, sessions, options?)` returns `{ columns, rows }` with one row per respondent:
+  `sessionId`, `definitionVersion`, `finished`, `ending`, `startedAt`, `completedAt`, `durationMs`, then one column per
+  question in the definition's order. `toCSV(...)` returns the same as CSV, joining list answers with `;` and
+  defusing spreadsheet formulas. Options: `includeAbandoned`, `includeTimings` (`time:<id>` columns) and
+  `includeContext` (`context:<key>` columns). Sessions can be live, saved JSON, or `{ sessionId, state }` entries from
+  `store.listSessions()`.
 - **Versioning:** `migrateSession(savedState, newDefinition)` moves a saved session onto a changed definition.
   Answers to removed questions, or answers that no longer validate, move to `abandonedAnswers`. If the respondent's
   current question was removed, the session resumes at its first unanswered question. It returns the new state and a
