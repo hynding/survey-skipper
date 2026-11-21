@@ -1,6 +1,6 @@
 {
   "name": "survey-skipper-react",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "React hooks for running survey-skipper surveys",
   "main": "dist/index.js",
   "module": "dist/esm/index.js",

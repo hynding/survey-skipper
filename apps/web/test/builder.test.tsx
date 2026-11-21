@@ -3,11 +3,12 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { after, afterEach, before, test } from 'node:test';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { MemoryStore } from 'survey-skipper';
+import { MemoryStore, SurveyDefinition } from 'survey-skipper';
 import { createHandler } from 'survey-skipper-server';
 import { Api } from '../src/api';
 import { parseRoute } from '../src/App';
 import { Builder, parseSource, STARTER } from '../src/Builder';
+import { Preview } from '../src/Preview';
 
 let server: Server;
 let base: string;
@@ -72,6 +73,30 @@ void test('the preview runs the rules', async () => {
     await Promise.resolve();
   });
   assert.ok(screen.getByText('How long do you usually wait, in minutes?'));
+});
+
+void test('the preview takes matrix answers', async () => {
+  const definition = new SurveyDefinition({
+    questions: [
+      {
+        id: 'grid',
+        text: 'Rate us',
+        type: 'matrix',
+        required: true,
+        rows: [{ value: 'food', text: 'Food' }, { value: 'service', text: 'Service' }],
+        answers: [{ value: 1, text: 'Bad' }, { value: 2, text: 'Good' }],
+      },
+      { id: 'done', text: 'Thanks for rating' },
+    ],
+  });
+  render(<Preview definition={definition} />);
+  fireEvent.click(screen.getByLabelText('Food: Good'));
+  fireEvent.click(screen.getByLabelText('Service: Bad'));
+  await act(async () => {
+    fireEvent.click(screen.getByText('Next'));
+    await Promise.resolve();
+  });
+  assert.ok(screen.getByText('Thanks for rating'));
 });
 
 void test('saving needs the API key, then the survey can be edited again', async () => {

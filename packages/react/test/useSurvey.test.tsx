@@ -140,3 +140,33 @@ void test('goTo jumps along the route and refuses other questions', () => {
   });
   assert.equal(result.current.question.id, 'age');
 });
+
+void test('matrix answers can be passed as the bare { row: column } object', () => {
+  const grid: SurveyDefinitionInput = {
+    questions: [
+      {
+        id: 'grid',
+        type: 'matrix',
+        required: true,
+        rows: [{ value: 'food' }, { value: 'value' }],
+        answers: [{ value: 1 }, { value: 2 }, { value: 3 }],
+      },
+      { id: 'done' },
+    ],
+  };
+  const { result } = renderHook(() => useSurvey(grid));
+  const question = result.current.question;
+  assert.ok(question);
+  act(() => {
+    assert.equal(result.current.answer({ food: 3, value: 1 }), true);
+  });
+  assert.deepEqual(result.current.valueOf(question), { food: 3, value: 1 });
+  act(() => {
+    assert.equal(result.current.answer({ value: { food: 2, value: 2 } }), true);
+  });
+  assert.deepEqual(result.current.valueOf(question), { food: 2, value: 2 });
+  act(() => {
+    assert.equal(result.current.next(), true);
+  });
+  assert.equal(result.current.question?.id, 'done');
+});

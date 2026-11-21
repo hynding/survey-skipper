@@ -113,11 +113,11 @@ export function useSurvey(
 
   const answer = useCallback(
     (value: AnswerValue | AnswerInput, question?: Question): boolean => {
-      const input: AnswerInput = isAnswerInput(value) ? value : { value };
       const target = question ?? session.getQuestion();
       if (!target) {
         return false;
       }
+      const input: AnswerInput = isAnswerInput(value, target) ? value : { value };
       const result = session.answer(input, target);
       setErrors((current) => ({ ...current, [String(target.id)]: result.errors }));
       return result.ok;
@@ -191,6 +191,26 @@ export function useSurvey(
   }, [session, snapshot, errors, answer, next, back, goTo, setContext]);
 }
 
-function isAnswerInput(value: unknown): value is AnswerInput {
+/**
+ * Whether `value` is an `{ value, text? }` answer rather than a bare answer value. A matrix question's bare value is
+ * itself an object (`{ row: column }`), so for matrix questions only an object whose `value` is an object (or null)
+ * and that has no keys besides `value` and `text` counts as an answer input.
+ */
+function isAnswerInput(value: unknown, question: Question): value is AnswerInput {
+  if (!isPlainObject(value)) {
+    return false;
+  }
+  if (question.type !== 'matrix') {
+    return true;
+  }
+  const keys = Object.keys(value);
+  return (
+    'value' in value &&
+    (value.value === null || isPlainObject(value.value)) &&
+    keys.every((key) => key === 'value' || key === 'text')
+  );
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

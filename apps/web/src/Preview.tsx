@@ -35,7 +35,7 @@ export function Preview({ definition, context }: { definition: SurveyDefinition;
         let ok = true;
         for (const q of survey.page) {
           const draft = drafts[String(q.id)];
-          if (draft !== undefined && !survey.answer(draft, q)) {
+          if (draft !== undefined && !survey.answer({ value: draft }, q)) {
             ok = false;
           }
         }
