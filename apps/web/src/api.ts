@@ -9,6 +9,13 @@ export interface DefinitionSummary {
   title?: string;
   description?: string;
   questions: number;
+  status?: 'draft' | 'open' | 'closed';
+  opensAt?: string;
+  closesAt?: string;
+  /** Whether the survey takes new responses now. */
+  accepting?: boolean;
+  /** Why it doesn't, when `accepting` is false. */
+  reason?: 'draft' | 'closed' | 'not_yet_open' | 'past_close' | 'full';
 }
 
 export type FieldErrors = Record<string, ValidationError[]>;

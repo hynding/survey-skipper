@@ -12,7 +12,14 @@ export type {
 export { validateAnswer } from './validation.js';
 export type { ValidationCode, ValidationError } from './validation.js';
 export { SCHEMA_VERSION, SurveyDefinition } from './definition.js';
-export type { AnswerMap, SurveyDefinitionInput, SurveyDefinitionJSON } from './definition.js';
+export type {
+  AnswerMap,
+  Availability,
+  ClosedReason,
+  SurveyDefinitionInput,
+  SurveyDefinitionJSON,
+  SurveyStatus,
+} from './definition.js';
 export { SurveySession } from './session.js';
 export type {
   SessionEvents,

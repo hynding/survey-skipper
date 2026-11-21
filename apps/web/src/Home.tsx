@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 import type { Api, DefinitionSummary } from './api';
 
+const REASONS: Record<NonNullable<DefinitionSummary['reason']>, string> = {
+  draft: 'Draft',
+  closed: 'Closed',
+  not_yet_open: 'Not open yet',
+  past_close: 'Closed',
+  full: 'Full',
+};
+
 /** Lists the surveys on the server. */
 export function Home({ api }: { api: Api }) {
   const [surveys, setSurveys] = useState<DefinitionSummary[] | null>(null);
@@ -26,6 +34,7 @@ export function Home({ api }: { api: Api }) {
       {surveys.map((s) => (
         <li key={String(s.id)}>
           <a href={`#/s/${encodeURIComponent(String(s.id))}`}>{s.title ?? String(s.id)}</a>
+          {s.accepting === false && s.reason ? <span className="badge">{REASONS[s.reason]}</span> : null}
           {s.description ? <p>{s.description}</p> : null}
           <small>
             {s.questions} questions · <a href={`#/builder/${encodeURIComponent(String(s.id))}`}>Edit</a>
