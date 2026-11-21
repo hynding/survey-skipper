@@ -61,6 +61,16 @@ export interface SurveyDefinitionInput {
   closesAt?: string;
   /** The survey stops taking new responses once this many have been completed. */
   maxResponses?: number;
+  /**
+   * Settings for sections, keyed by the questions' `section` name. `randomize: true` asks the section's questions in
+   * a random order, fixed per session. Rules that `goTo` the section's first question enter it at its shuffled start.
+   */
+  sections?: Record<string, SectionSettings>;
+}
+
+export interface SectionSettings {
+  /** Ask this section's consecutive questions in a random order, fixed per session. */
+  randomize?: boolean;
 }
 
 /** What {@link SurveyDefinition.toJSON} returns. Pass it back to `new SurveyDefinition(...)` to restore. */
@@ -92,6 +102,7 @@ export class SurveyDefinition {
   opensAt: string | undefined;
   closesAt: string | undefined;
   maxResponses: number | undefined;
+  sections: Record<string, SectionSettings>;
   private readonly idMap = new Map<string, number>();
 
   constructor({
@@ -111,6 +122,7 @@ export class SurveyDefinition {
     opensAt,
     closesAt,
     maxResponses,
+    sections = {},
   }: SurveyDefinitionInput = {}) {
     if (!isNil(schemaVersion) && schemaVersion > SCHEMA_VERSION) {
       throw new RangeError(
@@ -137,6 +149,7 @@ export class SurveyDefinition {
     this.opensAt = opensAt;
     this.closesAt = closesAt;
     this.maxResponses = maxResponses;
+    this.sections = { ...sections };
     this.reindex();
   }
 
@@ -250,6 +263,7 @@ export class SurveyDefinition {
       ...(this.opensAt === undefined ? {} : { opensAt: this.opensAt }),
       ...(this.closesAt === undefined ? {} : { closesAt: this.closesAt }),
       ...(this.maxResponses === undefined ? {} : { maxResponses: this.maxResponses }),
+      ...(Object.keys(this.sections).length > 0 ? { sections: this.sections } : {}),
     };
   }
 

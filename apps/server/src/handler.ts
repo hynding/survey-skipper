@@ -398,7 +398,7 @@ export function view(sessionId: string, session: SurveySession): SessionView {
   const describe = (q: Question): QuestionView => {
     const index = session.definition.indexOf(q.id);
     const input = (index === undefined ? undefined : inputs[index]) ?? { id: q.id };
-    return { ...input, displayText: session.getQuestionText(q) };
+    return { ...input, answers: session.getOptions(q), displayText: session.getQuestionText(q) };
   };
   const question = session.getQuestion();
   const state = session.toJSON();

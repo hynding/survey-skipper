@@ -62,6 +62,11 @@ export interface QuestionInput {
   validation?: ValidationRules;
   /** Translations keyed by locale. The session picks one from `context.locale`. */
   translations?: Record<string, QuestionTranslation>;
+  /**
+   * Shows the answer options in a random order, fixed per session (see `SurveySession.getOptions`). Options marked
+   * `fixed`, and custom options, keep their place.
+   */
+  randomize?: boolean;
 }
 
 export class Question {
@@ -76,8 +81,9 @@ export class Question {
   required: boolean;
   validation: ValidationRules;
   translations: Record<string, QuestionTranslation>;
+  randomize: boolean | undefined;
 
-  constructor({ id, text, answers = [], rules = [], showIf, skipIf, type, section, required = false, validation = {}, translations = {} }: QuestionInput) {
+  constructor({ id, text, answers = [], rules = [], showIf, skipIf, type, section, required = false, validation = {}, translations = {}, randomize }: QuestionInput) {
     if (isNil(id)) {
       throw new TypeError('Question requires an id');
     }
@@ -92,6 +98,7 @@ export class Question {
     this.required = required;
     this.validation = { ...validation };
     this.translations = { ...translations };
+    this.randomize = randomize;
   }
 
   /** Wraps a plain object (e.g. deserialized JSON) in a Question; passes Questions through. */

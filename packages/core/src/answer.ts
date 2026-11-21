@@ -11,17 +11,24 @@ export interface AnswerInput {
   text?: string;
   value?: AnswerValue | null;
   isCustom?: boolean;
+  /** Keeps this option in place when the question's options are shuffled (`randomize`). Custom options always stay. */
+  fixed?: boolean;
 }
 
 export class Answer {
   text: string | undefined;
   value: AnswerValue | null | undefined;
   isCustom: boolean;
+  /** Set only on options that stay in place when options are shuffled. */
+  fixed?: boolean;
 
-  constructor({ text, value, isCustom = false }: AnswerInput = {}) {
+  constructor({ text, value, isCustom = false, fixed }: AnswerInput = {}) {
     this.value = Array.isArray(value) ? [...value] : value;
     this.text = text ?? (isNil(this.value) ? undefined : Array.isArray(this.value) ? this.value.join(', ') : String(this.value));
     this.isCustom = isCustom;
+    if (fixed) {
+      this.fixed = true;
+    }
   }
 
   /** Wraps a plain object (e.g. deserialized JSON) in an Answer; passes Answers through. */

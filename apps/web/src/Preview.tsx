@@ -51,7 +51,7 @@ export function Preview({ definition, context }: { definition: SurveyDefinition;
         return (
           <QuestionField
             key={id}
-            question={{ ...input, displayText: survey.textOf(q) }}
+            question={{ ...input, answers: survey.optionsOf(q), displayText: survey.textOf(q) }}
             value={id in drafts ? drafts[id] : survey.valueOf(q)}
             errors={survey.errors[id]}
             onChange={(v) => {

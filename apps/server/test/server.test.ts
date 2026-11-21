@@ -167,6 +167,21 @@ void test('closed, draft, scheduled and full surveys refuse new sessions', async
   }
 });
 
+void test('shuffled options keep their order for a session', async () => {
+  const letters = ['a', 'b', 'c', 'd', 'e', 'f'];
+  await store.saveDefinition({ id: 'shuffle', questions: [{ id: 'pick', randomize: true, answers: letters.map((value) => ({ value })) }] });
+  const orders = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const started = await call<SessionView>('POST', '/definitions/shuffle/sessions');
+    const order = (started.body.question?.answers ?? []).map((a) => String(a.value)).join(',');
+    assert.deepEqual(order.split(',').sort(), letters);
+    const again = await call<SessionView>('GET', `/sessions/${started.body.sessionId}`);
+    assert.equal((again.body.question?.answers ?? []).map((a) => String(a.value)).join(','), order);
+    orders.add(order);
+  }
+  assert.ok(orders.size > 1);
+});
+
 void test('sessions can be deleted', async () => {
   const { body } = await call<SessionView>('POST', '/definitions/commute/sessions');
   assert.equal((await call('DELETE', `/sessions/${body.sessionId}`)).status, 204);
