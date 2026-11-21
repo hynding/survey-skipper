@@ -1,7 +1,7 @@
 # Survey Skipper roadmap
 
-Status: decisions answered on 2026-11-20 (see section 5). **Every item below is built** (marked ✅ with the release
-that shipped it).
+Status: the first round (sections 1 to 5) is fully built. A second round of features was proposed on 2026-11-21 and
+is tracked in section 6, in build order.
 
 Goal of the project: **create, manage, track, share and extend customizable surveys whose path branches on rules and
 context.** This plan maps that goal onto the library as it stands at v2.0.0 (strict TypeScript, PR #1).
@@ -210,3 +210,34 @@ of churn for users.
 3. **Condition format:** JsonLogic, with YAML authoring support (R2).
 4. **Answer changes:** keep answers on the abandoned route, marked as abandoned, with an option for survey creators to
    discard them instead (built in C2: `abandonedAnswers`, `keepAbandonedAnswers`).
+
+## 6. Second round (proposed 2026-11-21)
+
+The first round made the library, service and apps work end to end. The second round is about running real surveys
+with them: getting results out, controlling when a survey takes responses, the question formats people expect from
+survey tools, and connecting the service to other systems.
+
+Items are listed in the order they will be built. IDs continue the first round's letters.
+
+| # | ID | Feature | Where | Scope |
+| --- | --- | --- | --- | --- |
+| 1 | T4 | **Response export.** `toRows()` / `toCSV()` in core turn sessions into one row per respondent (answers, ending, timings, abandoned answers optional). Server: `GET /definitions/:id/responses.csv` and `.json`. | core, server | S |
+| 2 | M4 | **Survey lifecycle.** Definitions get `status` (`draft`, `open`, `closed`), `opensAt` / `closesAt` and `maxResponses`. The server refuses new sessions outside that window and reports why; `isAcceptingResponses()` in core. | core, server | S |
+| 3 | UI3 | **Results dashboard** at `#/results/<id>` in the web app: completion, endings, drop-off per question and answer distributions from the stats route, with a CSV download (T4). | web | M |
+| 4 | A6 | **Randomized order.** `randomize` on a question shuffles its options; `randomize` on a section shuffles its questions. Seeded per session so the order survives back, resume and reload; the seed is saved with the session. | core, web | M |
+| 5 | R7 | **Scoring.** `score` on answer options; `getScore()` on the session, `score` readable in conditions and piped text, and score totals in `aggregate()`. Quizzes and lead scoring without hand-written variables. | core | S |
+| 6 | A7 | **Carry-forward options.** `answersFrom: { question, include: 'selected' \| 'unselected' }` builds a question's options from an earlier multi-select answer. | core, web | S |
+| 7 | A8 | **Ranking and matrix questions.** `ranking` (order all options) and `matrix` (rows rated on shared columns, answer is an object by row). Validation, lint, aggregation and UI support. | core, web | M |
+| 8 | R8 | **Quotas.** `quotas: [{ id, if, limit, end }]` on the definition. The server counts completed sessions per quota and passes the counts as `context.quotas`; a session that would land in a full quota ends with the quota's ending. | core, server | M |
+| 9 | SV2 | **Webhooks.** Server option to POST session events (`complete`, optionally `answer`) to configured URLs, signed with an HMAC header, with retries. | server | S |
+| 10 | S4 | **Embedding and share links.** `#/embed/<id>` renders a survey without the app chrome and posts `survey-skipper:complete` to the parent window; the builder shows a share link and an iframe snippet. | web | S |
+| 11 | R9 | **`skipped` operator** (left over from R2): true when a question was routed past, so later rules can react to it. | core | S |
+| 12 | M5 | **Definition diff.** `diffDefinitions(a, b)` lists added, removed and changed questions, options and rules; the builder shows the diff against the saved version before saving. | core, web | M |
+
+### Phases
+
+- **Phase 8, results and lifecycle:** T4, M4, UI3. Makes the hosted service usable for a real survey.
+- **Phase 9, question formats:** A6, R7, A7, A8, R9 (core 3.7 and on).
+- **Phase 10, integration:** R8, SV2, S4, M5.
+
+None of these needs a breaking change. Each item ships as its own PR and is merged once CI is green.
