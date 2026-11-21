@@ -354,7 +354,15 @@ export class SurveySession {
     }
     const own = question ? answers[String(question.id)] : undefined;
     const score = scoreAnswers(this.definition, this.answers);
-    const data: RuleData = { answers, context: this.context, answer: own ?? null, vars: {}, score: score.total, scores: score.sections };
+    const data: RuleData = {
+      answers,
+      context: this.context,
+      answer: own ?? null,
+      vars: {},
+      score: score.total,
+      scores: score.sections,
+      skipped: this.getSkipped().map(String),
+    };
     for (const [name, expression] of Object.entries(this.definition.variables)) {
       data.vars[name] = compute(expression, data);
     }
@@ -505,6 +513,38 @@ export class SurveySession {
       }
     });
     return this;
+  }
+
+  /**
+   * Questions routed past without being asked (hidden, pre-answered, or with no options to carry forward) on the
+   * respondent's current route, oldest first. Stepping back past the point where a question was routed past removes
+   * it again. Rules read this with the `skipped` operator.
+   */
+  getSkipped(): QuestionId[] {
+    const skips: { id: QuestionId; at: number }[] = [];
+    const lastShown = new Map<string, number>();
+    this.timeline.forEach((event, i) => {
+      const key = event.questionId === undefined ? undefined : String(event.questionId);
+      if (event.type === 'skipped' && event.questionId !== undefined && key !== undefined) {
+        if (!skips.some((s) => String(s.id) === key)) {
+          skips.push({ id: event.questionId, at: i });
+        }
+      } else if (event.type === 'shown' && key !== undefined) {
+        lastShown.set(key, i);
+        const at = skips.findIndex((s) => String(s.id) === key);
+        if (at !== -1) {
+          skips.splice(at, 1);
+        }
+      } else if (event.type === 'back' && key !== undefined) {
+        const since = lastShown.get(key) ?? -1;
+        for (let j = skips.length - 1; j >= 0; j--) {
+          if ((skips[j]?.at ?? 0) > since) {
+            skips.splice(j, 1);
+          }
+        }
+      }
+    });
+    return skips.map((s) => s.id);
   }
 
   /** Whether this respondent's answers and context so far match a quota's condition. */
