@@ -4,6 +4,8 @@ import {
   aggregate,
   lintDefinition,
   SurveyDefinition,
+  toCSV,
+  toRows,
   SurveySession,
   type AnswerInput,
   type Question,
@@ -51,6 +53,15 @@ export interface QuestionView extends QuestionInput {
   displayText: string;
 }
 
+/** A non-JSON response body. */
+class RawBody {
+  constructor(
+    readonly contentType: string,
+    readonly text: string,
+    readonly filename?: string,
+  ) {}
+}
+
 class HttpError extends Error {
   constructor(
     readonly status: number,
@@ -81,7 +92,7 @@ interface Context {
  * - `GET /health`
  * - `GET /definitions`, `POST /definitions` (JSON, or YAML with `Content-Type: application/yaml`)
  * - `GET /definitions/:id[?version=]`, `GET /definitions/:id/lint`
- * - `GET /definitions/:id/sessions`, `GET /definitions/:id/stats`
+ * - `GET /definitions/:id/sessions`, `GET /definitions/:id/stats`, `GET /definitions/:id/responses.csv|.json`
  * - `POST /definitions/:id/sessions` starts a session (`{ context?, version? }`)
  * - `GET|DELETE /sessions/:sid`, `POST /sessions/:sid/answers`, `POST /sessions/:sid/next`,
  *   `POST /sessions/:sid/back`, `POST /sessions/:sid/goto`, `PUT /sessions/:sid/context`
@@ -168,6 +179,25 @@ export function createHandler(options: HandlerOptions): Handler {
           .map((s) => s.state)
           .filter((state) => version === null || String(state.definitionVersion) === version);
         return [200, aggregate(sessions)];
+      },
+    },
+    {
+      method: 'GET',
+      pattern: /^\/definitions\/([^/]+)\/responses\.(?:csv|json)$/,
+      admin: true,
+      run: async (ctx, id) => {
+        const params = ctx.url.searchParams;
+        const version = params.get('version');
+        const definition = await loadDefinition(id, version);
+        const sessions = (await store.listSessions(id)).filter(
+          (s) => version === null || String(s.state.definitionVersion) === version,
+        );
+        const flag = (name: string) => ['1', 'true', 'yes'].includes(params.get(name) ?? '');
+        const options = { includeAbandoned: flag('abandoned'), includeTimings: flag('timings'), includeContext: flag('context') };
+        if (ctx.url.pathname.endsWith('.json')) {
+          return [200, toRows(definition, sessions, options)];
+        }
+        return [200, new RawBody('text/csv; charset=utf-8', toCSV(definition, sessions, options), `${id}-responses.csv`)];
       },
     },
     {
@@ -403,6 +433,14 @@ async function readBody(req: IncomingMessage, max: number): Promise<unknown> {
 function send(res: ServerResponse, status: number, payload: unknown): void {
   if (payload === undefined) {
     res.writeHead(status).end();
+    return;
+  }
+  if (payload instanceof RawBody) {
+    const headers: Record<string, string> = { 'Content-Type': payload.contentType };
+    if (payload.filename) {
+      headers['Content-Disposition'] = `attachment; filename="${payload.filename.replace(/[^\w.-]/g, '_')}"`;
+    }
+    res.writeHead(status, headers).end(payload.text);
     return;
   }
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }).end(JSON.stringify(payload));

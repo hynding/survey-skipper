@@ -38,7 +38,8 @@ async function start(options: HandlerOptions): Promise<{ server: Server; call: <
     }
     const res = await fetch(`http://localhost:${String(port)}${path}`, init);
     const text = await res.text();
-    return { status: res.status, body: (text ? JSON.parse(text) : undefined) as T };
+    const json = (res.headers.get('content-type') ?? '').includes('json');
+    return { status: res.status, body: (text && json ? JSON.parse(text) : text || undefined) as T };
   };
   return { server, call };
 }
@@ -122,6 +123,19 @@ void test('responses and stats are admin only', async () => {
   const stats = await call<{ sessions: number; endings: Record<string, number> }>('GET', '/definitions/commute/stats', undefined, admin);
   assert.equal(stats.body.sessions, sessions.body.length);
   assert.equal(stats.body.endings.too_young, 1);
+});
+
+void test('responses export as CSV and JSON', async () => {
+  assert.equal((await call('GET', '/definitions/commute/responses.csv')).status, 401);
+  const csv = await call<string>('GET', '/definitions/commute/responses.csv?context=1', undefined, admin);
+  assert.equal(csv.status, 200);
+  const [header = '', ...lines] = csv.body.trim().split('\r\n');
+  assert.ok(header.startsWith('sessionId,definitionVersion,finished,ending,startedAt,completedAt,durationMs,age,role,done'));
+  assert.ok(header.includes('context:employed'));
+  assert.ok(lines.some((line) => line.includes(',too_young,')));
+  const json = await call<{ columns: string[]; rows: Record<string, unknown>[] }>('GET', '/definitions/commute/responses.json', undefined, admin);
+  assert.equal(json.body.rows.length, lines.length);
+  assert.ok(json.body.rows.some((row) => row.ending === 'too_young' && row.age === 12));
 });
 
 void test('sessions can be deleted', async () => {
