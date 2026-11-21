@@ -94,6 +94,7 @@ export function Results({ api, definitionId, storage = safeSession() }: ResultsP
         <Tile label="Responses" value={String(stats.sessions)} />
         <Tile label="Completed" value={String(stats.completed)} />
         <Tile label="Completion rate" value={percent(stats.completionRate)} />
+        {stats.score && stats.score.count > 0 ? <Tile label={`Average score (${String(stats.score.min)} to ${String(stats.score.max)})`} value={String(Math.round(stats.score.mean * 10) / 10)} /> : null}
       </div>
       <p>
         <button type="button" onClick={() => void download()} disabled={stats.sessions === 0}>

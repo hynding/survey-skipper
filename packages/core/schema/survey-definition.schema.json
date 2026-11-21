@@ -159,6 +159,10 @@
         "fixed": {
           "type": "boolean",
           "description": "Keeps the option in place when options are shuffled."
+        },
+        "score": {
+          "type": "number",
+          "description": "Points for picking this option."
         }
       },
       "additionalProperties": false

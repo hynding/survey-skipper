@@ -42,7 +42,7 @@ All bodies are JSON. 🔑 marks creator routes that need the API key when one is
 | `GET /definitions/:id/lint` | Lint issues for a definition. |
 | `POST /definitions/:id/sessions` | Start a session. Body: `{ context?, version? }`. Returns a session view (201), or 403 with a `reason` when the survey is not taking responses (see below). |
 | 🔑 `GET /definitions/:id/sessions` | Saved sessions for a definition. |
-| 🔑 `GET /definitions/:id/stats?version=` | `aggregate()` over its sessions: completion, endings, distributions, drop-off, paths. |
+| 🔑 `GET /definitions/:id/stats?version=` | `aggregate()` over its sessions: completion, endings, distributions, drop-off, paths, and `score` when options have scores. |
 | 🔑 `GET /definitions/:id/responses.csv` | One row per session as CSV (`toCSV()`), as a download. Query: `version`, and `abandoned=1`, `timings=1`, `context=1` for extra columns. |
 | 🔑 `GET /definitions/:id/responses.json` | The same as `{ columns, rows }` (`toRows()`). |
 | `GET /sessions/:sid` | The session view. |

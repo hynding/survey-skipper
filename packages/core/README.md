@@ -138,6 +138,20 @@ are joined with `, ` and missing values become empty text.
 | `complete` | `{ ending }` | The session finished |
 
 
+### Scoring
+
+Give answer options a `score` to build quizzes, assessments or lead scoring:
+
+```ts
+{ id: 'capital', section: 'geo', type: 'single', answers: [{ value: 'paris', score: 2 }, { value: 'lyon', score: 0 }] }
+```
+
+`session.getScore()` returns `{ total, sections }`: the points of every option picked (each picked option of a multi
+answer counts), with totals per question `section`. Custom answers score the question's custom option. Rules,
+`showIf`, variables and piped text can read `score` and `scores.<section>`, for example
+`{ if: { '>=': [{ var: 'score' }, 4] }, end: 'pass' }` or `"You scored {{score}}"`. Pass the definition as the second
+argument of `aggregate()` to get `score` statistics (count, mean, min, max, distribution) over completed sessions.
+
 ### Randomized order
 
 - `randomize: true` on a question shuffles its answer options. Options with `fixed: true` (such as "None of these")

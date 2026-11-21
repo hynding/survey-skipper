@@ -197,7 +197,7 @@ export function createHandler(options: HandlerOptions): Handler {
         const sessions = (await store.listSessions(id))
           .map((s) => s.state)
           .filter((state) => version === null || String(state.definitionVersion) === version);
-        return [200, aggregate(sessions)];
+        return [200, aggregate(sessions, await loadDefinition(id, version))];
       },
     },
     {

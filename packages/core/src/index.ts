@@ -61,7 +61,9 @@ export {
 } from './builder.js';
 export type { QuestionOptions } from './builder.js';
 export { aggregate, timeOnQuestions } from './analytics.js';
-export type { QuestionStats, SurveyStats } from './analytics.js';
+export type { QuestionStats, ScoreStats, SurveyStats } from './analytics.js';
+export { scoreAnswers } from './scoring.js';
+export type { Score } from './scoring.js';
 export { toCSV, toRows } from './responses.js';
 export type { CellValue, ExportableSession, ExportOptions, ResponseRow, ResponseTable } from './responses.js';
 export { migrateSession } from './versioning.js';
