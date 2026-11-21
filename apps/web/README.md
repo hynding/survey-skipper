@@ -29,6 +29,17 @@ ending, and for each question how many people saw it, answered it and stopped th
 **Download CSV** saves every response (one row per respondent). Results need the server's API key when it has one;
 the key is shared with the builder for the tab. The survey list links to each survey's results.
 
+## Sharing and embedding
+
+The builder's **Share** panel (shown once a survey is saved) has the survey's link and an iframe snippet. Query values
+on the link become the respondent's context. `#/embed/<id>` renders the survey without the app header, and posts
+messages to the parent page:
+
+- `{ type: 'survey-skipper:resize', height }` whenever its height changes, so the iframe can fit its content.
+- `{ type: 'survey-skipper:complete', definitionId, sessionId, ending }` when the respondent finishes.
+
+`<Respondent onFinish={(view) => ...} />` gives the same completion hook to React code.
+
 ## Run it
 
 ```sh

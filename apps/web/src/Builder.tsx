@@ -4,6 +4,7 @@ import { parseSurvey, stringifySurvey } from 'survey-skipper-yaml';
 import { ApiError, type Api } from './api';
 import { Graph } from './Graph';
 import { Preview } from './Preview';
+import { Share } from './Share';
 
 export const STARTER = `id: my-survey
 title: My survey
@@ -146,6 +147,7 @@ export function Builder({ api, definitionId, storage = safeSession() }: BuilderP
             Save
           </button>
         </div>
+        {status?.id ?? definitionId ? <Share definitionId={status?.id ?? definitionId ?? ''} /> : null}
         {status ? (
           <p role="status" className={status.kind === 'ok' ? 'saved' : 'problem'}>
             {status.text} {status.id ? <a href={`#/s/${encodeURIComponent(status.id)}`}>Open survey</a> : null}

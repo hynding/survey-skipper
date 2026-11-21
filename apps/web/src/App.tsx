@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { SessionView } from './api';
 import { Api } from './api';
 import { Builder } from './Builder';
 import { Home } from './Home';
@@ -9,11 +10,11 @@ export type Route =
   | { page: 'home' }
   | { page: 'builder'; id?: string }
   | { page: 'results'; id: string }
-  | { page: 'survey'; id: string; context: Record<string, unknown> };
+  | { page: 'survey'; id: string; context: Record<string, unknown>; embed?: boolean };
 
 /**
  * Reads the hash route: `#/` for the list, `#/builder[/<id>]` for the builder, `#/results/<id>` for results,
- * `#/s/<id>?employed=true&name=Ana` for
+ * `#/s/<id>?employed=true&name=Ana` (or `#/embed/<id>?...` for the chrome-free embed) for
  * a survey. Query values become the
  * session's context; JSON values (`true`, `3`, `["a"]`) are parsed, anything else stays a string.
  */
@@ -30,8 +31,8 @@ export function parseRoute(hash: string): Route {
   if (results?.[1]) {
     return { page: 'results', id: decodeURIComponent(results[1]) };
   }
-  const match = /^\/s\/([^/]+)$/.exec(path);
-  if (!match?.[1]) {
+  const match = /^\/(s|embed)\/([^/]+)$/.exec(path);
+  if (!match?.[2]) {
     return { page: 'home' };
   }
   const context: Record<string, unknown> = {};
@@ -42,7 +43,7 @@ export function parseRoute(hash: string): Route {
       context[k] = v;
     }
   }
-  return { page: 'survey', id: decodeURIComponent(match[1]), context };
+  return { page: 'survey', id: decodeURIComponent(match[2]), context, ...(match[1] === 'embed' ? { embed: true } : {}) };
 }
 
 export function App({ api: given }: { api?: Api }) {
@@ -58,6 +59,10 @@ export function App({ api: given }: { api?: Api }) {
       window.removeEventListener('hashchange', onHash);
     };
   }, []);
+
+  if (route.page === 'survey' && route.embed) {
+    return <Embed api={api} definitionId={route.id} context={route.context} />;
+  }
 
   return (
     <main>
@@ -77,6 +82,45 @@ export function App({ api: given }: { api?: Api }) {
       ) : (
         <Home api={api} />
       )}
+    </main>
+  );
+}
+
+/**
+ * A survey without the app's header, for an iframe. Tells the parent page its height
+ * (`{ type: 'survey-skipper:resize', height }`) and when the respondent finishes
+ * (`{ type: 'survey-skipper:complete', definitionId, sessionId, ending }`).
+ */
+export function Embed({ api, definitionId, context }: { api: Api; definitionId: string; context: Record<string, unknown> }) {
+  const post = useCallback((message: Record<string, unknown>) => {
+    if (window.parent !== window) {
+      window.parent.postMessage(message, '*');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      post({ type: 'survey-skipper:resize', height: Math.ceil(document.documentElement.offsetHeight) });
+    });
+    observer.observe(document.body);
+    return () => {
+      observer.disconnect();
+    };
+  }, [post]);
+
+  const onFinish = useCallback(
+    (view: SessionView) => {
+      post({ type: 'survey-skipper:complete', definitionId, sessionId: view.sessionId, ending: view.ending ?? null });
+    },
+    [post, definitionId],
+  );
+
+  return (
+    <main className="embed">
+      <Respondent api={api} definitionId={definitionId} context={Object.keys(context).length > 0 ? context : undefined} onFinish={onFinish} />
     </main>
   );
 }

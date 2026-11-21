@@ -8,6 +8,7 @@ import { createHandler } from 'survey-skipper-server';
 import { Api } from '../src/api';
 import { parseRoute } from '../src/App';
 import { Respondent } from '../src/Respondent';
+import { shareLinks } from '../src/Share';
 
 const definition = {
   id: 'commute',
@@ -150,4 +151,27 @@ void test('routes read the survey id and context from the hash', () => {
     id: 'commute',
     context: { employed: true, name: 'Ana', n: 3 },
   });
+});
+
+void test('embed routes parse with their context', () => {
+  assert.deepEqual(parseRoute('#/embed/commute?name=Ana'), { page: 'survey', id: 'commute', context: { name: 'Ana' }, embed: true });
+  assert.deepEqual(parseRoute('#/s/commute'), { page: 'survey', id: 'commute', context: {} });
+});
+
+void test('finishing calls onFinish once with the ending', async () => {
+  const finished: (string | undefined)[] = [];
+  render(<Respondent api={new Api(base)} definitionId="commute" storage={memoryStorage()} onFinish={(v) => finished.push(v.ending)} />);
+  await screen.findByText('How old are you?');
+  fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '12' } });
+  await next();
+  await screen.findByText('Thank you!');
+  assert.deepEqual(finished, ['too_young']);
+});
+
+void test('share links point at the survey and the embed', () => {
+  const { link, embed, snippet } = shareLinks('my survey', 'https://surveys.example.com/');
+  assert.equal(link, 'https://surveys.example.com/#/s/my%20survey');
+  assert.equal(embed, 'https://surveys.example.com/#/embed/my%20survey');
+  assert.ok(snippet.includes(`src="${embed}"`));
+  assert.ok(snippet.includes('survey-skipper:complete'));
 });
