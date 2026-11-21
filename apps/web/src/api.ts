@@ -1,4 +1,4 @@
-import type { LintIssue, SurveyDefinitionJSON, ValidationError } from 'survey-skipper';
+import type { LintIssue, SurveyDefinitionJSON, SurveyStats, ValidationError } from 'survey-skipper';
 import type { SessionView } from 'survey-skipper-server';
 
 export type { SessionView, QuestionView } from 'survey-skipper-server';
@@ -76,6 +76,24 @@ export class Api {
     return this.call('POST', `/sessions/${encodeURIComponent(sessionId)}/back`);
   }
 
+  /** Summary numbers for a survey's responses. Needs the server's API key when it has one. */
+  getStats(definitionId: string, apiKey?: string): Promise<SurveyStats> {
+    return this.call('GET', `/definitions/${encodeURIComponent(definitionId)}/stats`, undefined, auth(apiKey));
+  }
+
+  /** Every response as CSV text. Needs the server's API key when it has one. */
+  async getResponsesCsv(definitionId: string, apiKey?: string): Promise<string> {
+    const res = await this.fetcher(`${this.base}/definitions/${encodeURIComponent(definitionId)}/responses.csv`, {
+      headers: { ...(this.apiKey ? { authorization: `Bearer ${this.apiKey}` } : {}), ...auth(apiKey) },
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      const payload = (text ? JSON.parse(text) : {}) as { error?: string };
+      throw new ApiError(res.status, payload.error ?? `Request failed (${String(res.status)})`);
+    }
+    return text;
+  }
+
   private async call<T>(method: string, path: string, body?: unknown, extraHeaders: Record<string, string> = {}): Promise<T> {
     const headers: Record<string, string> = { 'content-type': 'application/json' };
     if (this.apiKey) {
@@ -95,4 +113,8 @@ export class Api {
     }
     return data as T;
   }
+}
+
+function auth(apiKey?: string): Record<string, string> {
+  return apiKey ? { authorization: `Bearer ${apiKey}` } : {};
 }
