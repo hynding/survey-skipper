@@ -1,5 +1,6 @@
 import { isMatrix, type Answer } from './answer.js';
 import { Question, type QuestionId, type QuestionInput } from './question.js';
+import type { Quota } from './quotas.js';
 import { assertRuleShape, type Condition, type Rule } from './rules.js';
 import { isNil } from './utils.js';
 
@@ -66,6 +67,8 @@ export interface SurveyDefinitionInput {
    * a random order, fixed per session. Rules that `goTo` the section's first question enter it at its shuffled start.
    */
   sections?: Record<string, SectionSettings>;
+  /** Caps on how many completed responses can match a condition. See {@link Quota}. */
+  quotas?: Quota[];
 }
 
 export interface SectionSettings {
@@ -103,6 +106,7 @@ export class SurveyDefinition {
   closesAt: string | undefined;
   maxResponses: number | undefined;
   sections: Record<string, SectionSettings>;
+  quotas: Quota[];
   private readonly idMap = new Map<string, number>();
 
   constructor({
@@ -123,6 +127,7 @@ export class SurveyDefinition {
     closesAt,
     maxResponses,
     sections = {},
+    quotas = [],
   }: SurveyDefinitionInput = {}) {
     if (!isNil(schemaVersion) && schemaVersion > SCHEMA_VERSION) {
       throw new RangeError(
@@ -150,6 +155,7 @@ export class SurveyDefinition {
     this.closesAt = closesAt;
     this.maxResponses = maxResponses;
     this.sections = { ...sections };
+    this.quotas = quotas.map((q) => ({ ...q }));
     this.reindex();
   }
 
@@ -270,6 +276,7 @@ export class SurveyDefinition {
       ...(this.closesAt === undefined ? {} : { closesAt: this.closesAt }),
       ...(this.maxResponses === undefined ? {} : { maxResponses: this.maxResponses }),
       ...(Object.keys(this.sections).length > 0 ? { sections: this.sections } : {}),
+      ...(this.quotas.length > 0 ? { quotas: this.quotas } : {}),
     };
   }
 

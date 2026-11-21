@@ -16,7 +16,8 @@ export type LintCode =
   | 'invalid-pattern'
   | 'missing-options'
   | 'unknown-type'
-  | 'unknown-validator';
+  | 'unknown-validator'
+  | 'quota-limit';
 
 export interface LintIssue {
   severity: 'error' | 'warning';
@@ -104,6 +105,17 @@ export function lintDefinition(definition: SurveyDefinition): LintIssue[] {
       issues.push({ severity: 'warning', code: 'unreachable-question', message: `No route leads to "${String(q.id)}"`, questionId: q.id });
     }
   }
+  const quotaIds = new Set<string>();
+  for (const quota of definition.quotas) {
+    if (quotaIds.has(quota.id)) {
+      issues.push({ severity: 'error', code: 'duplicate-id', message: `Quota id "${quota.id}" is used more than once` });
+    }
+    quotaIds.add(quota.id);
+    if (!Number.isInteger(quota.limit) || quota.limit < 0) {
+      issues.push({ severity: 'error', code: 'quota-limit', message: `Quota "${quota.id}" needs a whole-number limit of 0 or more` });
+    }
+    checkCondition(quota.if, ids, `Quota "${quota.id}"`, undefined, issues);
+  }
   return issues;
 }
 
@@ -138,22 +150,23 @@ function checkCondition(
   condition: Condition | undefined,
   ids: Set<string>,
   where: string,
-  questionId: QuestionId,
+  questionId: QuestionId | undefined,
   issues: LintIssue[],
 ): void {
+  const at = questionId === undefined ? {} : { questionId };
   walk(condition, (operator, args) => {
     if (operator === 'var') {
       const path = Array.isArray(args) ? (args[0] as unknown) : args;
       if (typeof path === 'string' && path.startsWith('answers.')) {
         const id = path.slice('answers.'.length);
         if (!ids.has(id)) {
-          issues.push({ severity: 'warning', code: 'unknown-reference', message: `${where} reads unknown question "${id}"`, questionId });
+          issues.push({ severity: 'warning', code: 'unknown-reference', message: `${where} reads unknown question "${id}"`, ...at });
         }
       }
     } else if (operator === 'answered' && (typeof args === 'string' || typeof args === 'number') && !ids.has(String(args))) {
-      issues.push({ severity: 'warning', code: 'unknown-reference', message: `${where} checks unknown question "${String(args)}"`, questionId });
+      issues.push({ severity: 'warning', code: 'unknown-reference', message: `${where} checks unknown question "${String(args)}"`, ...at });
     } else if (operator === 'matches' && Array.isArray(args) && typeof args[1] === 'string' && !isRegExp(args[1])) {
-      issues.push({ severity: 'error', code: 'invalid-pattern', message: `${where} uses an invalid regular expression`, questionId });
+      issues.push({ severity: 'error', code: 'invalid-pattern', message: `${where} uses an invalid regular expression`, ...at });
     }
   });
 }

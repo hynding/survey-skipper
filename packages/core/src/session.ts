@@ -2,6 +2,7 @@ import { Answer, valueKey, type AnswerInput, type AnswerValue } from './answer.j
 import { SCHEMA_VERSION, SurveyDefinition, type SurveyDefinitionInput } from './definition.js';
 import type { Question, QuestionId } from './question.js';
 import { compute, evaluate, type RuleData } from './rules.js';
+import { OVER_QUOTA, type Quota } from './quotas.js';
 import { scoreAnswers, type Score } from './scoring.js';
 import { validateAnswer, type ValidationError } from './validation.js';
 
@@ -73,6 +74,11 @@ export interface SessionOptions {
   now?: () => Date;
   /** Makes the seed for a new session's shuffled order. Defaults to `Math.random`-based. */
   random?: () => number;
+  /**
+   * Completed responses counted toward each of the definition's quotas so far, by quota id (see `countQuotas`).
+   * Without it, quotas are not enforced.
+   */
+  quotaCounts?: Record<string, number>;
 }
 
 /** What {@link SurveySession.toJSON} returns. */
@@ -134,6 +140,8 @@ export class SurveySession {
   private readonly positions: number[];
   /** For each randomized section block, the definition index of its first question → the shuffled first. */
   private readonly blockEntry = new Map<number, number>();
+  /** Completed responses per quota, from the `quotaCounts` option. Update it when counts change. */
+  quotaCounts: Record<string, number> | undefined;
   private readonly now: () => Date;
   private readonly listeners = new Map<keyof SessionEvents, Set<(event: never) => void>>();
 
@@ -152,6 +160,7 @@ export class SurveySession {
     this.ending = state.ending;
     this.timeline = (state.timeline ?? []).map((event) => ({ ...event }));
     this.now = options.now ?? (() => new Date());
+    this.quotaCounts = options.quotaCounts === undefined ? undefined : { ...options.quotaCounts };
     this.seed = state.seed ?? Math.floor((options.random ?? Math.random)() * 2 ** 32);
     this.order = this.questions.map((_q, i) => i);
     this.shuffleSections();
@@ -449,7 +458,13 @@ export class SurveySession {
       this.history.push(start.id);
       this.ending = undefined;
     }
-    const next = this.advance(start);
+    let next = this.advance(start);
+    const full = next ? this.fullQuota() : undefined;
+    if (full) {
+      this.index = this.questions.length;
+      this.ending = full.end ?? OVER_QUOTA;
+      next = null;
+    }
     this.reconcileForward(next);
     if (start) {
       if (next) {
@@ -490,6 +505,38 @@ export class SurveySession {
       }
     });
     return this;
+  }
+
+  /** Whether this respondent's answers and context so far match a quota's condition. */
+  matchesQuota(quota: Quota): boolean {
+    return evaluate(quota.if, this.getRuleData(null));
+  }
+
+  /** The first full quota (by `quotaCounts`) this respondent matches, if any. */
+  fullQuota(): Quota | undefined {
+    const counts = this.quotaCounts;
+    if (!counts) {
+      return undefined;
+    }
+    return this.definition.quotas.find((q) => (counts[q.id] ?? 0) >= q.limit && this.matchesQuota(q));
+  }
+
+  /**
+   * Finishes the session on the quota's ending if the respondent matches a full quota, and returns that quota. Call
+   * it after setting context on a new session, to screen respondents out before the first question. Moving forward
+   * checks quotas on its own.
+   */
+  checkQuotas(): Quota | undefined {
+    const full = this.fullQuota();
+    const current = this.getQuestion();
+    if (full && current) {
+      this.index = this.questions.length;
+      this.ending = full.end ?? OVER_QUOTA;
+      this.record({ type: 'complete', ending: this.ending });
+      this.emit('navigate', { from: current, to: null });
+      this.emit('complete', { ending: this.ending });
+    }
+    return full;
   }
 
   /** Whether {@link back} has a question to return to. */

@@ -92,6 +92,7 @@ void test('lifecycle, sections, randomizing, scores, carry-forward and matrix ro
     closesAt: '2026-07-01T00:00:00Z',
     maxResponses: 100,
     sections: { s: { randomize: true } },
+    quotas: [{ id: 'q', if: { '==': [{ var: 'answers.a' }, 'x'] }, limit: 5, end: 'full' }],
     questions: [
       { id: 'a', type: 'multi', randomize: true, answers: [{ value: 'x', score: 2 }, { value: 'none', fixed: true }] },
       { id: 'b', type: 'single', answersFrom: { question: 'a', include: 'unselected' as const } },

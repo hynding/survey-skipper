@@ -182,6 +182,33 @@ void test('shuffled options keep their order for a session', async () => {
   assert.ok(orders.size > 1);
 });
 
+void test('full quotas screen respondents out', async () => {
+  await store.saveDefinition({
+    id: 'quota',
+    quotas: [
+      { id: 'cats', if: { '==': [{ var: 'answers.pet' }, 'cat'] }, limit: 1, end: 'cats_full' },
+      { id: 'vip', if: { '==': [{ var: 'context.vip' }, true] }, limit: 0 },
+    ],
+    questions: [{ id: 'pet' }, { id: 'name' }],
+  });
+  const answer = async (value: string) => {
+    const { body } = await call<SessionView>('POST', '/definitions/quota/sessions');
+    await call('POST', `/sessions/${body.sessionId}/answers`, { value });
+    return call<SessionView>('POST', `/sessions/${body.sessionId}/next`);
+  };
+  const first = await answer('cat');
+  assert.equal(first.body.question?.id, 'name');
+  await call('POST', `/sessions/${first.body.sessionId}/answers`, { value: 'Tom' });
+  assert.equal((await call<SessionView>('POST', `/sessions/${first.body.sessionId}/next`)).body.finished, true);
+  const second = await answer('cat');
+  assert.deepEqual([second.body.finished, second.body.ending], [true, 'cats_full']);
+  assert.equal((await answer('dog')).body.question?.id, 'name');
+  const vip = await call<SessionView>('POST', '/definitions/quota/sessions', { context: { vip: true } });
+  assert.deepEqual([vip.body.finished, vip.body.ending], [true, 'over_quota']);
+  const status = await call<{ id: string; count: number; full: boolean }[]>('GET', '/definitions/quota/quotas', undefined, admin);
+  assert.deepEqual(status.body.map((q) => [q.id, q.count, q.full]), [['cats', 1, true], ['vip', 0, true]]);
+});
+
 void test('sessions can be deleted', async () => {
   const { body } = await call<SessionView>('POST', '/definitions/commute/sessions');
   assert.equal((await call('DELETE', `/sessions/${body.sessionId}`)).status, 204);

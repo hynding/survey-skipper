@@ -67,6 +67,8 @@ export { scoreAnswers } from './scoring.js';
 export type { Score } from './scoring.js';
 export { toCSV, toRows } from './responses.js';
 export type { CellValue, ExportableSession, ExportOptions, ResponseRow, ResponseTable } from './responses.js';
+export { countQuotas, OVER_QUOTA, quotaStatus } from './quotas.js';
+export type { Quota, QuotaStatus } from './quotas.js';
 export { migrateSession } from './versioning.js';
 export type { MigrationReport } from './versioning.js';
 export {

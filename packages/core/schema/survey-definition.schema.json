@@ -100,6 +100,33 @@
         },
         "additionalProperties": false
       }
+    },
+    "quotas": {
+      "type": "array",
+      "description": "Caps on completed responses matching a condition.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "if": {
+            "$ref": "#/$defs/condition"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "end": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "limit"
+        ],
+        "additionalProperties": false
+      }
     }
   },
   "additionalProperties": false,

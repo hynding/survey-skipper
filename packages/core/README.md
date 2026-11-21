@@ -209,6 +209,24 @@ and `closesAt` (ISO 8601 date-times) and `maxResponses`. `definition.availabilit
 of completed responses as `responses` to check `maxResponses`. `isAcceptingResponses(...)` returns just the boolean.
 Sessions themselves don't check it, so a respondent who already started can finish.
 
+### Quotas
+
+`quotas` on the definition cap how many completed responses can match a condition:
+
+```ts
+quotas: [
+  { id: 'under30', if: { '<': [{ var: 'answers.age' }, 30] }, limit: 200, end: 'quota_full' },
+  { id: 'mobile', if: { '==': [{ var: 'context.device' }, 'mobile'] }, limit: 100 },
+]
+```
+
+`countQuotas(definition, sessions)` counts completed sessions per quota (sessions screened out by a quota don't count),
+and `quotaStatus(...)` adds each `limit` and whether it is `full`. Pass the counts to a session as
+`new SurveySession(definition, state, { quotaCounts })`: moving forward then finishes a respondent who matches a full
+quota on its `end` ending (default `over_quota`). `session.checkQuotas()` does the same check on demand, for example
+right after setting context on a new session. Without `quotaCounts`, quotas are not enforced. `survey-skipper-server`
+does all of this for you.
+
 ### Saving and restoring
 
 Both classes have `toJSON()`, so `JSON.stringify` works directly. Pass the parsed JSON back to the constructor:
