@@ -91,6 +91,8 @@ Give a question a `type` to say what answer it expects, mark it `required`, and 
 | `rating` | A whole number on a scale | `min`, `max` (default 1 to 5) |
 | `date` | `YYYY-MM-DD` | `min`, `max` as dates |
 | `boolean` | `true` or `false` | |
+| `ranking` | The answer options as a list, most preferred first, each once | `maxSelected` to rank only the top few |
+| `matrix` | `{ [row]: column }`: one answer option (column) for each of the question's `rows` | `required` means every row |
 
 ```ts
 const result = session.answer({ value: 130 }); // the current question is { type: 'number', validation: { max: 120 } }
@@ -102,10 +104,18 @@ result; // => { ok: false, errors: [{ code: 'max', message: 'Must be at most 120
 - `session.validate(question?)` checks the stored answer, which reports `required` for a missing one.
 - `validateAnswer(question, answer)` is the same check as a standalone function.
 - Error codes: `required`, `type`, `option`, `min`, `max`, `minLength`, `maxLength`, `pattern`, `minSelected`,
-  `maxSelected`. Messages are plain English defaults; map codes to your own text as needed.
+  `maxSelected`, `duplicate`. Messages are plain English defaults; map codes to your own text as needed.
 - Answers keep their types: booleans stay `true`/`false` (2.x and 3.0 stored them as `1`/`0`), and multiple-choice
   answers are lists, which rules can test with `{ "in": ["dog", { "var": "answer" }] }`. In the answer map, a list
   answer's key is its values joined with `,`.
+- Matrix answers are objects, so rules read a row with `{ "var": "answers.grid.food" }`. `aggregate()` counts each
+  row as `row: column`, and `toRows()` / `toCSV()` give each row its own `<id>:<row>` column. `AnswerValue` now
+  includes `MatrixValue`; `isMatrix()`, `formatAnswerValue()` and `valueKey()` help handle it.
+
+```ts
+{ id: 'grid', type: 'matrix', rows: [{ value: 'food' }, { value: 'service' }],
+  answers: [{ value: 1, text: 'Bad' }, { value: 2, text: 'OK' }, { value: 3, text: 'Great' }] }
+```
 
 ### Pages, piped text and events
 

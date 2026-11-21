@@ -13,8 +13,12 @@ export type QuestionId = string | number;
  * - `rating`: a whole number on a scale (`validation.min`..`validation.max`, default 1..5)
  * - `date`: an ISO date string, `YYYY-MM-DD`
  * - `boolean`: `true` or `false`
+ * - `ranking`: the answer options as a list, most preferred first. Every option must be ranked, unless
+ *   `validation.maxSelected` asks for only the top few.
+ * - `matrix`: the column picked for each of the question's `rows`, as `{ [rowValue]: columnValue }`; the columns are
+ *   the answer options. `required` means every row needs an answer.
  */
-export type BuiltInQuestionType = 'single' | 'multi' | 'text' | 'number' | 'rating' | 'date' | 'boolean';
+export type BuiltInQuestionType = 'single' | 'multi' | 'text' | 'number' | 'rating' | 'date' | 'boolean' | 'ranking' | 'matrix';
 
 /** A built-in type, or a name registered with `registerQuestionType`. */
 // `string & {}` keeps editor suggestions for the built-in names.
@@ -73,6 +77,8 @@ export interface QuestionInput {
    * added after them. When no options carry forward, the question is routed past.
    */
   answersFrom?: AnswersFrom;
+  /** The rows of a `matrix` question. Plain objects are wrapped in {@link Answer}. */
+  rows?: (Answer | AnswerInput)[];
 }
 
 export interface AnswersFrom {
@@ -94,8 +100,9 @@ export class Question {
   translations: Record<string, QuestionTranslation>;
   randomize: boolean | undefined;
   answersFrom: AnswersFrom | undefined;
+  rows: Answer[] | undefined;
 
-  constructor({ id, text, answers = [], rules = [], showIf, skipIf, type, section, required = false, validation = {}, translations = {}, randomize, answersFrom }: QuestionInput) {
+  constructor({ id, text, answers = [], rules = [], showIf, skipIf, type, section, required = false, validation = {}, translations = {}, randomize, answersFrom, rows }: QuestionInput) {
     if (isNil(id)) {
       throw new TypeError('Question requires an id');
     }
@@ -112,6 +119,7 @@ export class Question {
     this.translations = { ...translations };
     this.randomize = randomize;
     this.answersFrom = answersFrom === undefined ? undefined : { ...answersFrom };
+    this.rows = rows?.map((row) => Answer.from(row));
   }
 
   /** Wraps a plain object (e.g. deserialized JSON) in a Question; passes Questions through. */

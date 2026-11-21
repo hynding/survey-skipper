@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { Given, Then, When } from '@cucumber/cucumber';
-import { SurveyDefinition, SurveySession, type SurveyDefinitionInput } from '../../src';
+import { SurveyDefinition, SurveySession, type SurveyDefinitionInput, valueKey } from '../../src';
 import type { SurveyWorld } from '../support/world';
 
 interface RandomWorld extends SurveyWorld {
@@ -18,7 +18,7 @@ function def(world: RandomWorld): SurveyDefinition {
 const options = (s: SurveySession) =>
   s
     .getOptions(s.definition.getQuestionById('pick'))
-    .map((a) => String(a.value))
+    .map((a) => valueKey(a.value))
     .join(',');
 
 /** Walks a fresh copy of the session through the survey and returns the question ids asked. */

@@ -1,4 +1,4 @@
-import type { AnswerValue } from './answer.js';
+import { isMatrix, type ScalarValue } from './answer.js';
 import type { QuestionId } from './question.js';
 import { SurveyDefinition, type SurveyDefinitionInput } from './definition.js';
 import { scoreAnswers } from './scoring.js';
@@ -11,7 +11,10 @@ export interface QuestionStats {
   answered: number;
   /** Unfinished sessions that stopped on this question. */
   droppedOff: number;
-  /** How often each answer value was given. Each item of a list answer counts once. */
+  /**
+   * How often each answer value was given. Each item of a list answer counts once; each row of a matrix answer
+   * counts once as `row: column`.
+   */
   distribution: Record<string, number>;
 }
 
@@ -75,7 +78,8 @@ export function aggregate(
       }
       const qs = question(id);
       qs.answered += 1;
-      for (const item of Array.isArray(value) ? value : [value]) {
+      const items = isMatrix(value) ? Object.entries(value).map(([row, column]) => `${row}: ${String(column)}`) : Array.isArray(value) ? value : [value];
+      for (const item of items) {
         const key = valueKey(item);
         qs.distribution[key] = (qs.distribution[key] ?? 0) + 1;
       }
@@ -133,6 +137,6 @@ export function timeOnQuestions(timeline: TimelineEvent[]): Record<string, numbe
   return totals;
 }
 
-function valueKey(value: Exclude<AnswerValue, unknown[]>): string {
+function valueKey(value: ScalarValue): string {
   return String(value);
 }

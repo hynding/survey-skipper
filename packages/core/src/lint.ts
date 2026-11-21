@@ -82,7 +82,10 @@ export function lintDefinition(definition: SurveyDefinition): LintIssue[] {
     if (q.answersFrom && !ids.has(String(q.answersFrom.question))) {
       issues.push({ severity: 'warning', code: 'unknown-reference', message: `"${String(q.id)}" carries options from unknown question "${String(q.answersFrom.question)}"`, questionId: q.id });
     }
-    if ((q.type === 'single' || q.type === 'multi') && q.answers.length === 0 && !q.answersFrom) {
+    if (q.type === 'matrix' && (q.rows ?? []).length === 0) {
+      issues.push({ severity: 'warning', code: 'missing-options', message: `"${String(q.id)}" is a matrix question with no rows`, questionId: q.id });
+    }
+    if ((q.type === 'single' || q.type === 'multi' || q.type === 'ranking' || q.type === 'matrix') && q.answers.length === 0 && !q.answersFrom) {
       issues.push({ severity: 'warning', code: 'missing-options', message: `"${String(q.id)}" is a ${q.type} choice question with no answer options`, questionId: q.id });
     }
   }

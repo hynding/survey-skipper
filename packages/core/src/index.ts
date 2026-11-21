@@ -1,5 +1,5 @@
-export { Answer } from './answer.js';
-export type { AnswerInput, AnswerValue, ScalarValue } from './answer.js';
+export { Answer, formatAnswerValue, isMatrix, valueKey } from './answer.js';
+export type { AnswerInput, AnswerValue, MatrixValue, ScalarValue } from './answer.js';
 export { Question } from './question.js';
 export type {
   AnswersFrom,

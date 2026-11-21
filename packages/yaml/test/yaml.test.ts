@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { SurveySession } from 'survey-skipper';
+import { SurveyDefinition, SurveySession } from 'survey-skipper';
 import { loadSurvey, parseSurvey, stringifySurvey } from '../src';
 
 const doc = `
@@ -82,4 +82,22 @@ void test('question types and validation survive a round-trip', () => {
   assert.equal(age?.type, 'number');
   assert.equal(age.required, true);
   assert.deepEqual(age.validation, { min: 0, max: 120 });
+});
+
+void test('lifecycle, sections, randomizing, scores, carry-forward and matrix rows survive a round-trip', () => {
+  const input = {
+    id: 'full',
+    status: 'open' as const,
+    opensAt: '2026-06-01T00:00:00Z',
+    closesAt: '2026-07-01T00:00:00Z',
+    maxResponses: 100,
+    sections: { s: { randomize: true } },
+    questions: [
+      { id: 'a', type: 'multi', randomize: true, answers: [{ value: 'x', score: 2 }, { value: 'none', fixed: true }] },
+      { id: 'b', type: 'single', answersFrom: { question: 'a', include: 'unselected' as const } },
+      { id: 'c', type: 'matrix', section: 's', rows: [{ value: 'r1', text: 'Row 1' }], answers: [{ value: 1 }] },
+    ],
+  };
+  const json = new SurveyDefinition(parseSurvey(stringifySurvey(input))).toJSON();
+  assert.deepEqual(JSON.parse(JSON.stringify(json)), JSON.parse(JSON.stringify(new SurveyDefinition(input).toJSON())));
 });

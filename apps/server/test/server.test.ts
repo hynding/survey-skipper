@@ -5,7 +5,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
-import { MemoryStore, type SurveyStore } from 'survey-skipper';
+import { MemoryStore, valueKey, type SurveyStore } from 'survey-skipper';
 import { createHandler, FileStore, type HandlerOptions, type SessionView } from '../src/index.js';
 
 const definition = {
@@ -173,10 +173,10 @@ void test('shuffled options keep their order for a session', async () => {
   const orders = new Set<string>();
   for (let i = 0; i < 8; i++) {
     const started = await call<SessionView>('POST', '/definitions/shuffle/sessions');
-    const order = (started.body.question?.answers ?? []).map((a) => String(a.value)).join(',');
+    const order = (started.body.question?.answers ?? []).map((a) => valueKey(a.value)).join(',');
     assert.deepEqual(order.split(',').sort(), letters);
     const again = await call<SessionView>('GET', `/sessions/${started.body.sessionId}`);
-    assert.equal((again.body.question?.answers ?? []).map((a) => String(a.value)).join(','), order);
+    assert.equal((again.body.question?.answers ?? []).map((a) => valueKey(a.value)).join(','), order);
     orders.add(order);
   }
   assert.ok(orders.size > 1);

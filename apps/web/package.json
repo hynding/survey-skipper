@@ -1,6 +1,6 @@
 {
   "name": "survey-skipper-web",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "Web app for answering survey-skipper surveys, backed by survey-skipper-server",
   "type": "module",

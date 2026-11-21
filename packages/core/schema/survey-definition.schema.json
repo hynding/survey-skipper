@@ -127,6 +127,13 @@
           "items": {
             "$ref": "#/$defs/scalar"
           }
+        },
+        {
+          "type": "object",
+          "description": "A matrix answer: column value by row value.",
+          "additionalProperties": {
+            "$ref": "#/$defs/scalar"
+          }
         }
       ]
     },
@@ -228,7 +235,9 @@
                 "number",
                 "rating",
                 "date",
-                "boolean"
+                "boolean",
+                "ranking",
+                "matrix"
               ]
             },
             {
@@ -357,6 +366,13 @@
             "question"
           ],
           "additionalProperties": false
+        },
+        "rows": {
+          "type": "array",
+          "description": "The rows of a matrix question.",
+          "items": {
+            "$ref": "#/$defs/answer"
+          }
         }
       },
       "additionalProperties": false

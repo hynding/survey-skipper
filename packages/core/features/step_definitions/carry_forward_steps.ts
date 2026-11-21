@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { Given, Then, When } from '@cucumber/cucumber';
-import { lintDefinition, SurveyDefinition, SurveySession, type AnswerValue, type SurveyDefinitionInput } from '../../src';
+import { lintDefinition, SurveyDefinition, SurveySession, type AnswerValue, type SurveyDefinitionInput, valueKey } from '../../src';
 import type { SurveyWorld } from '../support/world';
 
 interface CarryWorld extends SurveyWorld {
@@ -41,7 +41,7 @@ When('it answers {string} with {string} and moves on', function (this: CarryWorl
 
 Then('the options for {string} are {string}', function (this: CarryWorld, id: string, expected: string) {
   const s = session(this);
-  assert.equal(s.getOptions(question(s, id)).map((a) => String(a.value)).join(', '), expected);
+  assert.equal(s.getOptions(question(s, id)).map((a) => valueKey(a.value)).join(', '), expected);
 });
 
 Then('answering {string} with {string} fails with {string}', function (this: CarryWorld, id: string, value: string, code: string) {

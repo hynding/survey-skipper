@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { SurveyDefinitionJSON, SurveyStats } from 'survey-skipper';
+import { valueKey, type SurveyDefinitionJSON, type SurveyStats } from 'survey-skipper';
 import { ApiError, type Api } from './api';
 
 export interface ResultsProps {
@@ -116,7 +116,7 @@ export function Results({ api, definitionId, storage = safeSession() }: ResultsP
           <h2>Questions</h2>
           {definition.questions.map((q) => {
             const qs = stats.questions[String(q.id)];
-            const labels = new Map((q.answers ?? []).map((a) => [String(a.value), a.text ?? String(a.value)]));
+            const labels = new Map((q.answers ?? []).map((a) => [valueKey(a.value), a.text ?? valueKey(a.value)]));
             const rows = Object.entries(qs?.distribution ?? {})
               .map(([value, count]) => ({ name: labels.get(value) ?? value, count }))
               .sort(q.type === 'rating' || q.type === 'number' ? (a, b) => Number(a.name) - Number(b.name) : (a, b) => b.count - a.count);

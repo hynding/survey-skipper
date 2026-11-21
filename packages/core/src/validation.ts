@@ -1,4 +1,4 @@
-import { Answer, type AnswerInput, type AnswerValue, type ScalarValue } from './answer.js';
+import { Answer, isMatrix, valueKey, type AnswerInput, type AnswerValue, type MatrixValue, type ScalarValue } from './answer.js';
 import { getQuestionType, getValidator } from './plugins.js';
 import type { Question } from './question.js';
 
@@ -13,6 +13,7 @@ export type ValidationCode =
   | 'pattern'
   | 'minSelected'
   | 'maxSelected'
+  | 'duplicate'
   | 'custom';
 
 export interface ValidationError {
@@ -43,7 +44,14 @@ export function validateAnswer(
   if (typeError) {
     return [typeError];
   }
-  const optionErrors = options === undefined && question.answersFrom ? [] : checkOptions(question, answer, options ?? question.answers);
+  const choices = options ?? question.answers;
+  if (question.type === 'ranking') {
+    return [...checkRanking(question, answer.value as ScalarValue[], choices), ...checkCustom(question, answer.value)];
+  }
+  if (question.type === 'matrix') {
+    return [...checkMatrix(question, answer.value as MatrixValue, choices), ...checkCustom(question, answer.value)];
+  }
+  const optionErrors = options === undefined && question.answersFrom ? [] : checkOptions(question, answer, choices);
   return [...optionErrors, ...checkRules(question, answer.value), ...checkCustom(question, answer.value)];
 }
 
@@ -63,6 +71,10 @@ function checkType(question: Question, value: AnswerValue): ValidationError | un
       return typeof value === 'number' && Number.isInteger(value) ? undefined : error('type', 'Expected a whole number');
     case 'boolean':
       return typeof value === 'boolean' ? undefined : error('type', 'Expected yes or no');
+    case 'ranking':
+      return Array.isArray(value) ? undefined : error('type', 'Expected the choices in order');
+    case 'matrix':
+      return isMatrix(value) ? undefined : error('type', 'Expected an answer for each row');
     case 'date':
       return typeof value === 'string' && DATE.test(value) && !Number.isNaN(Date.parse(value))
         ? undefined
@@ -87,6 +99,43 @@ function checkCustom(question: Question, value: AnswerValue): ValidationError[] 
     }
   }
   return errors;
+}
+
+function checkRanking(question: Question, value: ScalarValue[], choices: Answer[]): ValidationError[] {
+  const options = choices.filter((a) => !a.isCustom).map((a) => a.value);
+  const unknown = value.filter((v) => !options.some((o) => o === v));
+  if (unknown.length > 0) {
+    return [error('option', `Not one of the choices: ${unknown.map(String).join(', ')}`)];
+  }
+  if (new Set(value).size !== value.length) {
+    return [error('duplicate', 'Each choice can be ranked only once')];
+  }
+  const needed = Math.min(question.validation.maxSelected ?? options.length, options.length);
+  if (value.length < needed) {
+    return [error('minSelected', needed === options.length ? 'Rank every choice' : `Rank your top ${String(needed)}`)];
+  }
+  if (value.length > needed) {
+    return [error('maxSelected', `Rank only your top ${String(needed)}`)];
+  }
+  return [];
+}
+
+function checkMatrix(question: Question, value: MatrixValue, columns: Answer[]): ValidationError[] {
+  const rows = (question.rows ?? []).map((r) => valueKey(r.value));
+  const unknownRows = Object.keys(value).filter((row) => !rows.includes(row));
+  if (unknownRows.length > 0) {
+    return [error('option', `Not one of the rows: ${unknownRows.join(', ')}`)];
+  }
+  const options = columns.filter((a) => !a.isCustom).map((a) => a.value);
+  const badColumns = Object.entries(value).filter(([, column]) => !options.some((o) => o === column));
+  if (badColumns.length > 0) {
+    return [error('option', `Not one of the columns: ${badColumns.map(([row, column]) => `${row}: ${String(column)}`).join(', ')}`)];
+  }
+  const missing = rows.filter((row) => !(row in value));
+  if (question.required && missing.length > 0) {
+    return [error('required', `Answer every row (missing: ${missing.join(', ')})`)];
+  }
+  return [];
 }
 
 function checkOptions(question: Question, answer: Answer, choices: Answer[]): ValidationError[] {

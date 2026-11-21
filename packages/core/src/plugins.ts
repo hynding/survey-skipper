@@ -16,7 +16,7 @@ const BUILT_IN_OPERATORS = new Set([
   'max', 'min', '+', '-', '*', '/', '%', 'map', 'filter', 'reduce', 'all', 'none', 'some', 'merge', 'in', 'cat',
   'substr', 'log', 'answered', 'matches',
 ]);
-const BUILT_IN_TYPES = new Set(['single', 'multi', 'text', 'number', 'rating', 'date', 'boolean']);
+const BUILT_IN_TYPES = new Set(['single', 'multi', 'text', 'number', 'rating', 'date', 'boolean', 'ranking', 'matrix']);
 
 const types = new Map<string, TypeCheck>();
 const validators = new Map<string, Validator>();

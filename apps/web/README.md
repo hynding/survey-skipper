@@ -14,7 +14,7 @@ builder (UI2).
 
 ## Respondent app (`#/s/<id>`)
 
-- Every built-in question type: single and multi choice, text, number, rating, date and yes/no.
+- Every built-in question type: single and multi choice, text, number, rating, date, yes/no, ranking (move options up and down) and matrix (a radio grid).
 - Validation errors from the server, shown next to each question.
 - Back, a progress bar, and resume after a reload. The session id is kept in `localStorage`.
 - If the respondent changes an earlier answer and later comes back to a question they had answered on the old path,

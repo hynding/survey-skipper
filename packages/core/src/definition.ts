@@ -1,4 +1,4 @@
-import type { Answer } from './answer.js';
+import { isMatrix, type Answer } from './answer.js';
 import { Question, type QuestionId, type QuestionInput } from './question.js';
 import { assertRuleShape, type Condition, type Rule } from './rules.js';
 import { isNil } from './utils.js';
@@ -182,7 +182,13 @@ export class SurveyDefinition {
     if (answer.isCustom) {
       return this.customKey;
     }
-    return Array.isArray(answer.value) ? answer.value.map(String).join(',') : String(answer.value);
+    const value = answer.value;
+    if (isMatrix(value)) {
+      return Object.entries(value)
+        .map(([row, column]) => `${row}=${String(column)}`)
+        .join(',');
+    }
+    return Array.isArray(value) ? value.map(String).join(',') : String(value);
   }
 
   /**
