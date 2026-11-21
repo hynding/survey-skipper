@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getEdges, lintDefinition, SurveyDefinition, type LintIssue } from 'survey-skipper';
+import { diffDefinitions, getEdges, lintDefinition, SurveyDefinition, type LintIssue, type SurveyDefinitionJSON } from 'survey-skipper';
 import { parseSurvey, stringifySurvey } from 'survey-skipper-yaml';
 import { ApiError, type Api } from './api';
 import { Graph } from './Graph';
@@ -60,6 +60,7 @@ export function Builder({ api, definitionId, storage = safeSession() }: BuilderP
   const [loading, setLoading] = useState(Boolean(definitionId));
   const [tab, setTab] = useState<'graph' | 'preview'>('graph');
   const [apiKey, setApiKey] = useState(() => storage?.getItem('survey-skipper:api-key') ?? '');
+  const [saved, setSaved] = useState<SurveyDefinitionJSON | null>(null);
   const [status, setStatus] = useState<{ kind: 'ok' | 'error'; text: string; id?: string } | null>(null);
 
   useEffect(() => {
@@ -70,6 +71,7 @@ export function Builder({ api, definitionId, storage = safeSession() }: BuilderP
     api.getDefinition(definitionId).then(
       (json) => {
         if (!cancelled) {
+          setSaved(json);
           setSource(stringifySurvey(json));
           setLoading(false);
         }
@@ -89,12 +91,14 @@ export function Builder({ api, definitionId, storage = safeSession() }: BuilderP
   const parsed = useMemo(() => parseSource(source), [source]);
   const edges = useMemo(() => (parsed.ok ? getEdges(parsed.definition) : []), [parsed]);
   const errors = parsed.ok ? parsed.issues.filter((i) => i.severity === 'error').length : 1;
+  const changes = useMemo(() => (parsed.ok && saved ? diffDefinitions(saved, parsed.definition) : []), [parsed, saved]);
 
   const save = async () => {
     setStatus(null);
     storage?.setItem('survey-skipper:api-key', apiKey);
     try {
       const { definition } = await api.saveDefinitionYaml(source, apiKey || undefined);
+      setSaved(definition);
       setStatus({ kind: 'ok', text: `Saved ${String(definition.id)}${definition.version === undefined ? '' : ` v${String(definition.version)}`}.`, id: String(definition.id) });
     } catch (error) {
       const text = error instanceof ApiError && error.status === 401 ? 'The server needs an API key.' : error instanceof Error ? error.message : String(error);
@@ -133,6 +137,16 @@ export function Builder({ api, definitionId, storage = safeSession() }: BuilderP
             </ul>
           )}
         </div>
+        {changes.length > 0 ? (
+          <details className="changes">
+            <summary>{changes.length === 1 ? '1 change' : `${String(changes.length)} changes`} since the last save</summary>
+            <ul>
+              {changes.map((c, i) => (
+                <li key={i} className={`change ${c.kind}`}>{c.message}</li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
         <div className="save">
           <input
             type="password"

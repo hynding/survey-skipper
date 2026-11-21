@@ -94,6 +94,13 @@ void test('saving needs the API key, then the survey can be edited again', async
   const editor = await screen.findByLabelText<HTMLTextAreaElement>('Survey (YAML)');
   assert.match(editor.value, /How do you get to work\?/);
   assert.ok(screen.getByText('No problems found.'));
+  assert.equal(screen.queryByText(/since the last save/), null, 'no changes right after loading');
+  assert.ok(screen.getByText('Share'));
+
+  fireEvent.change(editor, { target: { value: editor.value.replace('How do you get to work?', 'How do you commute?').replace('title: My survey', 'title: Commute') } });
+  assert.ok(screen.getByText('2 changes since the last save'));
+  assert.ok(screen.getByText('Changed the text of "commute"'));
+  assert.ok(screen.getByText("Changed the survey's title"));
 });
 
 void test('builder routes', () => {
