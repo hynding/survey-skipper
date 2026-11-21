@@ -1,4 +1,4 @@
-import type { LintIssue, SurveyDefinitionJSON, SurveyStats, ValidationError } from 'survey-skipper';
+import type { LintIssue, QuotaStatus, SurveyDefinitionJSON, SurveyStats, ValidationError } from 'survey-skipper';
 import type { SessionView } from 'survey-skipper-server';
 
 export type { SessionView, QuestionView } from 'survey-skipper-server';
@@ -79,6 +79,11 @@ export class Api {
   /** Summary numbers for a survey's responses. Needs the server's API key when it has one. */
   getStats(definitionId: string, apiKey?: string): Promise<SurveyStats> {
     return this.call('GET', `/definitions/${encodeURIComponent(definitionId)}/stats`, undefined, auth(apiKey));
+  }
+
+  /** Each quota's limit, count and whether it is full. Needs the server's API key when it has one. */
+  getQuotas(definitionId: string, apiKey?: string): Promise<QuotaStatus[]> {
+    return this.call('GET', `/definitions/${encodeURIComponent(definitionId)}/quotas`, undefined, auth(apiKey));
   }
 
   /** Every response as CSV text. Needs the server's API key when it has one. */

@@ -2,7 +2,9 @@ import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   aggregate,
+  countQuotas,
   lintDefinition,
+  quotaStatus,
   SurveyDefinition,
   toCSV,
   toRows,
@@ -96,7 +98,7 @@ interface Context {
  * - `GET /health`
  * - `GET /definitions`, `POST /definitions` (JSON, or YAML with `Content-Type: application/yaml`)
  * - `GET /definitions/:id[?version=]`, `GET /definitions/:id/lint`
- * - `GET /definitions/:id/sessions`, `GET /definitions/:id/stats`, `GET /definitions/:id/responses.csv|.json`
+ * - `GET /definitions/:id/sessions`, `GET /definitions/:id/stats`, `GET /definitions/:id/quotas`, `GET /definitions/:id/responses.csv|.json`
  * - `POST /definitions/:id/sessions` starts a session (`{ context?, version? }`)
  * - `GET|DELETE /sessions/:sid`, `POST /sessions/:sid/answers`, `POST /sessions/:sid/next`,
  *   `POST /sessions/:sid/back`, `POST /sessions/:sid/goto`, `PUT /sessions/:sid/context`
@@ -124,7 +126,7 @@ export function createHandler(options: HandlerOptions): Handler {
       throw new HttpError(500, `Session "${sessionId}" has no definition id`);
     }
     const definition = await loadDefinition(String(state.definitionId), state.definitionVersion === undefined ? null : String(state.definitionVersion));
-    return new SurveySession(definition, state);
+    return new SurveySession(definition, state, { quotaCounts: await quotaCountsOf(definition) });
   };
 
   const isAdmin = (req: IncomingMessage) => options.apiKey === undefined || req.headers.authorization === `Bearer ${options.apiKey}`;
@@ -136,6 +138,14 @@ export function createHandler(options: HandlerOptions): Handler {
         ? undefined
         : (await store.listSessions(definition.id)).filter((s) => s.state.finished).length;
     return definition.availability({ now: now(), responses });
+  };
+
+  /** Completed responses per quota, across all versions of the definition. `undefined` when it has no quotas. */
+  const quotaCountsOf = async (definition: SurveyDefinition): Promise<Record<string, number> | undefined> => {
+    if (definition.quotas.length === 0 || definition.id === undefined) {
+      return undefined;
+    }
+    return countQuotas(definition, (await store.listSessions(definition.id)).map((s) => s.state));
   };
 
   const save = async (sessionId: string, session: SurveySession): Promise<SessionView> => {
@@ -202,6 +212,15 @@ export function createHandler(options: HandlerOptions): Handler {
     },
     {
       method: 'GET',
+      pattern: /^\/definitions\/([^/]+)\/quotas$/,
+      admin: true,
+      run: async (_ctx, id) => {
+        const definition = await loadDefinition(id);
+        return [200, quotaStatus(definition, (await store.listSessions(id)).map((s) => s.state))];
+      },
+    },
+    {
+      method: 'GET',
       pattern: /^\/definitions\/([^/]+)\/responses\.(?:csv|json)$/,
       admin: true,
       run: async (ctx, id) => {
@@ -231,10 +250,11 @@ export function createHandler(options: HandlerOptions): Handler {
         if (!availability.accepting && !preview) {
           throw new HttpError(403, CLOSED_MESSAGES[availability.reason ?? 'closed'], { reason: availability.reason });
         }
-        const session = new SurveySession(definition);
+        const session = new SurveySession(definition, {}, { quotaCounts: await quotaCountsOf(definition) });
         if (body.context !== undefined) {
           session.setContext(asObject(body.context));
         }
+        session.checkQuotas();
         return [201, await save(newId(), session)];
       },
     },

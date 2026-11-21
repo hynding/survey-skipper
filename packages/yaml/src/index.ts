@@ -50,6 +50,7 @@ export function stringifySurvey(survey: SurveyDefinition | SurveySession | Surve
     closesAt: s.closesAt,
     maxResponses: s.maxResponses,
     sections: Object.keys(s.sections).length > 0 ? s.sections : undefined,
+    quotas: s.quotas.length > 0 ? s.quotas : undefined,
     questions: s.questions.map(questionDefinition),
     answerMap: Object.keys(s.answerMap).length > 0 ? s.answerMap : undefined,
   });

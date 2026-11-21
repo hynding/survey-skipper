@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { valueKey, type SurveyDefinitionJSON, type SurveyStats } from 'survey-skipper';
+import { valueKey, type QuotaStatus, type SurveyDefinitionJSON, type SurveyStats } from 'survey-skipper';
 import { ApiError, type Api } from './api';
 
 export interface ResultsProps {
@@ -14,16 +14,19 @@ const KEY = 'survey-skipper:api-key';
 /** A survey's results: completion, endings, and per-question reach, drop-off and answers, with a CSV download. */
 export function Results({ api, definitionId, storage = safeSession() }: ResultsProps) {
   const [apiKey, setApiKey] = useState(() => storage?.getItem(KEY) ?? '');
-  const [data, setData] = useState<{ stats: SurveyStats; definition: SurveyDefinitionJSON } | null>(null);
+  const [data, setData] = useState<{ stats: SurveyStats; definition: SurveyDefinitionJSON; quotas: QuotaStatus[] } | null>(null);
   const [problem, setProblem] = useState<{ text: string; needsKey: boolean } | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([api.getStats(definitionId, apiKey || undefined), api.getDefinition(definitionId)]).then(
-      ([stats, definition]) => {
+    const key = apiKey || undefined;
+    Promise.all([api.getStats(definitionId, key), api.getDefinition(definitionId)])
+      .then(async ([stats, definition]) => ({ stats, definition, quotas: definition.quotas?.length ? await api.getQuotas(definitionId, key) : [] }))
+      .then(
+      (loaded) => {
         if (!cancelled) {
-          setData({ stats, definition });
+          setData(loaded);
           setProblem(null);
         }
       },
@@ -85,7 +88,7 @@ export function Results({ api, definitionId, storage = safeSession() }: ResultsP
     return <p aria-busy="true">Loading…</p>;
   }
 
-  const { stats, definition } = data;
+  const { stats, definition, quotas } = data;
   const endings = Object.entries(stats.endings).sort((a, b) => b[1] - a[1]);
   return (
     <section className="results">
@@ -111,6 +114,26 @@ export function Results({ api, definitionId, storage = safeSession() }: ResultsP
             <>
               <h2>Endings</h2>
               <Bars label="Completed responses by ending" rows={endings.map(([name, count]) => ({ name: name === '(none)' ? 'Reached the end' : name, count }))} total={stats.completed} />
+            </>
+          ) : null}
+          {quotas.length > 0 ? (
+            <>
+              <h2>Quotas</h2>
+              <table className="bars" aria-label="Quotas">
+                <tbody>
+                  {quotas.map((q) => (
+                    <tr key={q.id}>
+                      <th scope="row">{q.id}</th>
+                      <td className="bar-cell">
+                        <span className="bar" style={{ width: `${String(q.limit === 0 ? 100 : Math.min(1, q.count / q.limit) * 100)}%` }} />
+                      </td>
+                      <td className="bar-value">
+                        {q.count} of {q.limit} {q.full ? <small>full</small> : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </>
           ) : null}
           <h2>Questions</h2>
