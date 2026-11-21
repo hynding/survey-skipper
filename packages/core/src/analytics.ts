@@ -1,5 +1,7 @@
 import type { AnswerValue } from './answer.js';
 import type { QuestionId } from './question.js';
+import { SurveyDefinition, type SurveyDefinitionInput } from './definition.js';
+import { scoreAnswers } from './scoring.js';
 import { SurveySession, type SessionState, type TimelineEvent } from './session.js';
 
 export interface QuestionStats {
@@ -24,13 +26,32 @@ export interface SurveyStats {
   questions: Record<string, QuestionStats>;
   /** The routes respondents took (questions shown, in order), most common first. */
   paths: { questions: QuestionId[]; count: number }[];
+  /** Score totals of completed sessions, when a definition with scored options is passed to `aggregate`. */
+  score?: ScoreStats;
+}
+
+export interface ScoreStats {
+  /** Completed sessions counted. */
+  count: number;
+  mean: number;
+  min: number;
+  max: number;
+  /** How many completed sessions had each total. */
+  distribution: Record<string, number>;
 }
 
 /**
  * Summarizes many sessions of one survey: completion, endings, per-question answer distributions and drop-off, and
- * the most common routes. Accepts live sessions or saved session JSON (`definitionId` is not checked).
+ * the most common routes. Accepts live sessions or saved session JSON (`definitionId` is not checked). Pass the
+ * definition to also get `score` statistics when its options have scores.
  */
-export function aggregate(sessions: (SurveySession | SessionState)[]): SurveyStats {
+export function aggregate(
+  sessions: (SurveySession | SessionState)[],
+  definition?: SurveyDefinition | SurveyDefinitionInput,
+): SurveyStats {
+  const def = definition === undefined ? undefined : SurveyDefinition.from(definition);
+  const scored = def?.questions.some((q) => q.answers.some((a) => a.score !== undefined)) ? def : undefined;
+  const totals: number[] = [];
   const stats: SurveyStats = { sessions: 0, completed: 0, completionRate: 0, endings: {}, questions: {}, paths: [] };
   const pathCounts = new Map<string, { questions: QuestionId[]; count: number }>();
   const question = (id: QuestionId): QuestionStats => {
@@ -61,6 +82,9 @@ export function aggregate(sessions: (SurveySession | SessionState)[]): SurveySta
     }
     if (state.finished) {
       stats.completed += 1;
+      if (scored) {
+        totals.push(scoreAnswers(scored, state.answers ?? {}).total);
+      }
       const ending = state.ending ?? '(none)';
       stats.endings[ending] = (stats.endings[ending] ?? 0) + 1;
     } else if (state.currentQuestionId !== undefined) {
@@ -73,6 +97,19 @@ export function aggregate(sessions: (SurveySession | SessionState)[]): SurveySta
   }
   stats.completionRate = stats.sessions === 0 ? 0 : stats.completed / stats.sessions;
   stats.paths = [...pathCounts.values()].sort((a, b) => b.count - a.count);
+  if (scored) {
+    const distribution: Record<string, number> = {};
+    for (const total of totals) {
+      distribution[String(total)] = (distribution[String(total)] ?? 0) + 1;
+    }
+    stats.score = {
+      count: totals.length,
+      mean: totals.length === 0 ? 0 : totals.reduce((a, b) => a + b, 0) / totals.length,
+      min: totals.length === 0 ? 0 : Math.min(...totals),
+      max: totals.length === 0 ? 0 : Math.max(...totals),
+      distribution,
+    };
+  }
   return stats;
 }
 

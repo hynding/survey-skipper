@@ -13,6 +13,8 @@ export interface AnswerInput {
   isCustom?: boolean;
   /** Keeps this option in place when the question's options are shuffled (`randomize`). Custom options always stay. */
   fixed?: boolean;
+  /** Points for picking this option, added up by `SurveySession.getScore()`. */
+  score?: number;
 }
 
 export class Answer {
@@ -21,13 +23,18 @@ export class Answer {
   isCustom: boolean;
   /** Set only on options that stay in place when options are shuffled. */
   fixed?: boolean;
+  /** Points for picking this option. */
+  score?: number;
 
-  constructor({ text, value, isCustom = false, fixed }: AnswerInput = {}) {
+  constructor({ text, value, isCustom = false, fixed, score }: AnswerInput = {}) {
     this.value = Array.isArray(value) ? [...value] : value;
     this.text = text ?? (isNil(this.value) ? undefined : Array.isArray(this.value) ? this.value.join(', ') : String(this.value));
     this.isCustom = isCustom;
     if (fixed) {
       this.fixed = true;
+    }
+    if (score !== undefined) {
+      this.score = score;
     }
   }
 

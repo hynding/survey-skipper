@@ -2,6 +2,7 @@ import { Answer, type AnswerInput, type AnswerValue } from './answer.js';
 import { SCHEMA_VERSION, SurveyDefinition, type SurveyDefinitionInput } from './definition.js';
 import type { Question, QuestionId } from './question.js';
 import { compute, evaluate, type RuleData } from './rules.js';
+import { scoreAnswers, type Score } from './scoring.js';
 import { validateAnswer, type ValidationError } from './validation.js';
 
 /** Events a session emits, with the payload each listener receives. */
@@ -321,11 +322,20 @@ export class SurveySession {
       }
     }
     const own = question ? answers[String(question.id)] : undefined;
-    const data: RuleData = { answers, context: this.context, answer: own ?? null, vars: {} };
+    const score = scoreAnswers(this.definition, this.answers);
+    const data: RuleData = { answers, context: this.context, answer: own ?? null, vars: {}, score: score.total, scores: score.sections };
     for (const [name, expression] of Object.entries(this.definition.variables)) {
       data.vars[name] = compute(expression, data);
     }
     return data;
+  }
+
+  /**
+   * The respondent's score: the `score`s of the options they picked, in total and by section. Readable in conditions
+   * and piped text as `score` and `scores.<section>`.
+   */
+  getScore(): Score {
+    return scoreAnswers(this.definition, this.answers);
   }
 
   /** The definition's computed variables, evaluated against the current answers and context. */

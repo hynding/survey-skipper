@@ -35,6 +35,10 @@ export interface RuleData {
   answer: AnswerValue | null;
   /** The definition's computed variables, by name. */
   vars: Record<string, unknown>;
+  /** The total of the `score`s of the options picked so far. */
+  score?: number;
+  /** Score totals by section. */
+  scores?: Record<string, number>;
 }
 
 jsonLogic.add_operation('matches', (value: unknown, pattern: unknown): boolean => {
