@@ -222,7 +222,7 @@ Items are listed in the order they will be built. IDs continue the first round's
 | # | ID | Feature | Where | Scope |
 | --- | --- | --- | --- | --- |
 | 1 | T4 | ✅ Built (core 3.7, server 0.3). **Response export.** `toRows()` / `toCSV()` in core turn sessions into one row per respondent (answers, ending, timings, abandoned answers optional). Server: `GET /definitions/:id/responses.csv` and `.json`. | core, server | S |
-| 2 | M4 | **Survey lifecycle.** Definitions get `status` (`draft`, `open`, `closed`), `opensAt` / `closesAt` and `maxResponses`. The server refuses new sessions outside that window and reports why; `isAcceptingResponses()` in core. | core, server | S |
+| 2 | M4 | ✅ Built (core 3.8, server 0.4). **Survey lifecycle.** Definitions get `status` (`draft`, `open`, `closed`), `opensAt` / `closesAt` and `maxResponses`. The server refuses new sessions outside that window and reports why; `isAcceptingResponses()` in core. | core, server | S |
 | 3 | UI3 | **Results dashboard** at `#/results/<id>` in the web app: completion, endings, drop-off per question and answer distributions from the stats route, with a CSV download (T4). | web | M |
 | 4 | A6 | **Randomized order.** `randomize` on a question shuffles its options; `randomize` on a section shuffles its questions. Seeded per session so the order survives back, resume and reload; the seed is saved with the session. | core, web | M |
 | 5 | R7 | **Scoring.** `score` on answer options; `getScore()` on the session, `score` readable in conditions and piped text, and score totals in `aggregate()`. Quizzes and lead scoring without hand-written variables. | core | S |

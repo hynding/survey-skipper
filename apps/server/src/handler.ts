@@ -8,6 +8,8 @@ import {
   toRows,
   SurveySession,
   type AnswerInput,
+  type Availability,
+  type ClosedReason,
   type Question,
   type QuestionInput,
   type SessionState,
@@ -30,6 +32,8 @@ export interface HandlerOptions {
   maxBodyBytes?: number;
   /** Makes session ids. Default `crypto.randomUUID`. */
   newId?: () => string;
+  /** The clock used for `opensAt` / `closesAt`. Default `() => new Date()`. */
+  now?: () => Date;
 }
 
 export type Handler = (req: IncomingMessage, res: ServerResponse) => Promise<void>;
@@ -101,6 +105,7 @@ export function createHandler(options: HandlerOptions): Handler {
   const { store } = options;
   const maxBody = options.maxBodyBytes ?? 1_000_000;
   const newId = options.newId ?? randomUUID;
+  const now = options.now ?? (() => new Date());
 
   const loadDefinition = async (id: string, version?: string | null): Promise<SurveyDefinition> => {
     const definition = await store.loadDefinition(id, version ?? undefined);
@@ -122,6 +127,17 @@ export function createHandler(options: HandlerOptions): Handler {
     return new SurveySession(definition, state);
   };
 
+  const isAdmin = (req: IncomingMessage) => options.apiKey === undefined || req.headers.authorization === `Bearer ${options.apiKey}`;
+
+  /** Whether a definition takes new sessions, counting completed sessions only when it has `maxResponses`. */
+  const availabilityOf = async (definition: SurveyDefinition): Promise<Availability> => {
+    const responses =
+      definition.maxResponses === undefined || definition.id === undefined
+        ? undefined
+        : (await store.listSessions(definition.id)).filter((s) => s.state.finished).length;
+    return definition.availability({ now: now(), responses });
+  };
+
   const save = async (sessionId: string, session: SurveySession): Promise<SessionView> => {
     await store.saveSession(sessionId, session);
     return view(sessionId, session);
@@ -132,7 +148,10 @@ export function createHandler(options: HandlerOptions): Handler {
     {
       method: 'GET',
       pattern: /^\/definitions$/,
-      run: async () => [200, (await store.listDefinitions()).map((d) => summary(d))],
+      run: async () => {
+        const definitions = await store.listDefinitions();
+        return [200, await Promise.all(definitions.map(async (d) => ({ ...summary(d), ...(await availabilityOf(d)) })))];
+      },
     },
     {
       method: 'POST',
@@ -207,6 +226,11 @@ export function createHandler(options: HandlerOptions): Handler {
         const body = asObject(await ctx.body());
         const version = typeof body.version === 'string' || typeof body.version === 'number' ? String(body.version) : null;
         const definition = await loadDefinition(id, version);
+        const availability = await availabilityOf(definition);
+        const preview = availability.reason === 'draft' && isAdmin(ctx.req);
+        if (!availability.accepting && !preview) {
+          throw new HttpError(403, CLOSED_MESSAGES[availability.reason ?? 'closed'], { reason: availability.reason });
+        }
         const session = new SurveySession(definition);
         if (body.context !== undefined) {
           session.setContext(asObject(body.context));
@@ -331,7 +355,7 @@ export function createHandler(options: HandlerOptions): Handler {
         }
         throw new HttpError(404, `No route for ${method} ${url.pathname}`);
       }
-      if (found.route.admin && options.apiKey !== undefined && req.headers.authorization !== `Bearer ${options.apiKey}`) {
+      if (found.route.admin && !isAdmin(req)) {
         throw new HttpError(401, 'This route needs an API key');
       }
       const param = decodeURIComponent(found.match[1] ?? '');
@@ -347,9 +371,20 @@ export function createHandler(options: HandlerOptions): Handler {
   };
 }
 
+const CLOSED_MESSAGES: Record<ClosedReason, string> = {
+  draft: 'This survey is a draft and is not taking responses yet',
+  closed: 'This survey is closed',
+  not_yet_open: 'This survey is not open yet',
+  past_close: 'This survey has closed',
+  full: 'This survey has all the responses it needs',
+};
+
 function summary(definition: SurveyDefinition) {
   return {
     id: definition.id,
+    status: definition.status,
+    opensAt: definition.opensAt,
+    closesAt: definition.closesAt,
     version: definition.version,
     title: definition.title,
     description: definition.description,

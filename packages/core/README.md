@@ -152,6 +152,14 @@ works for earlier questions, and for questions they stepped back past while ever
 Anything else would bypass the rules, so it throws a `RangeError`. Check with `canGoTo(id)`, for example to enable
 links in a step list.
 
+### When a survey takes responses
+
+A definition can say when it takes new responses: `status` (`draft`, `open` or `closed`; unset means open), `opensAt`
+and `closesAt` (ISO 8601 date-times) and `maxResponses`. `definition.availability({ now?, responses? })` returns
+`{ accepting, reason? }`, where `reason` is `draft`, `closed`, `not_yet_open`, `past_close` or `full`. Pass the number
+of completed responses as `responses` to check `maxResponses`. `isAcceptingResponses(...)` returns just the boolean.
+Sessions themselves don't check it, so a respondent who already started can finish.
+
 ### Saving and restoring
 
 Both classes have `toJSON()`, so `JSON.stringify` works directly. Pass the parsed JSON back to the constructor:

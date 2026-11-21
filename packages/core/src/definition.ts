@@ -13,6 +13,19 @@ export const SCHEMA_VERSION = 1;
  */
 export type AnswerMap = Record<string, Record<string, QuestionId>>;
 
+/** Whether a survey takes new responses. Unset behaves like `open`. */
+export type SurveyStatus = 'draft' | 'open' | 'closed';
+
+/** Why a survey is not taking new responses. */
+export type ClosedReason = 'draft' | 'closed' | 'not_yet_open' | 'past_close' | 'full';
+
+/** What {@link SurveyDefinition.availability} returns. */
+export interface Availability {
+  accepting: boolean;
+  /** Set when `accepting` is false. */
+  reason?: ClosedReason;
+}
+
 export interface SurveyDefinitionInput {
   /** The `toJSON()` schema version the input was written with. Newer than {@link SCHEMA_VERSION} is rejected. */
   schemaVersion?: number;
@@ -40,6 +53,14 @@ export interface SurveyDefinitionInput {
   defaultLocale?: string;
   /** Title and description in other languages, keyed by locale. Question text is translated on each question. */
   translations?: Record<string, { title?: string; description?: string }>;
+  /** `draft` and `closed` surveys take no new responses. Unset behaves like `open`. */
+  status?: SurveyStatus;
+  /** ISO 8601 date-time before which the survey takes no new responses. */
+  opensAt?: string;
+  /** ISO 8601 date-time from which the survey takes no new responses. */
+  closesAt?: string;
+  /** The survey stops taking new responses once this many have been completed. */
+  maxResponses?: number;
 }
 
 /** What {@link SurveyDefinition.toJSON} returns. Pass it back to `new SurveyDefinition(...)` to restore. */
@@ -67,6 +88,10 @@ export class SurveyDefinition {
   variables: Record<string, Condition>;
   defaultLocale: string | undefined;
   translations: Record<string, { title?: string; description?: string }>;
+  status: SurveyStatus | undefined;
+  opensAt: string | undefined;
+  closesAt: string | undefined;
+  maxResponses: number | undefined;
   private readonly idMap = new Map<string, number>();
 
   constructor({
@@ -82,6 +107,10 @@ export class SurveyDefinition {
     variables = {},
     defaultLocale,
     translations = {},
+    status,
+    opensAt,
+    closesAt,
+    maxResponses,
   }: SurveyDefinitionInput = {}) {
     if (!isNil(schemaVersion) && schemaVersion > SCHEMA_VERSION) {
       throw new RangeError(
@@ -99,6 +128,15 @@ export class SurveyDefinition {
     this.variables = { ...variables };
     this.defaultLocale = defaultLocale;
     this.translations = { ...translations };
+    for (const [name, value] of [['opensAt', opensAt], ['closesAt', closesAt]] as const) {
+      if (value !== undefined && Number.isNaN(Date.parse(value))) {
+        throw new TypeError(`${name} must be an ISO 8601 date-time, got "${value}"`);
+      }
+    }
+    this.status = status;
+    this.opensAt = opensAt;
+    this.closesAt = closesAt;
+    this.maxResponses = maxResponses;
     this.reindex();
   }
 
@@ -167,6 +205,33 @@ export class SurveyDefinition {
     return this;
   }
 
+  /**
+   * Whether the survey takes new responses now: its `status` is not `draft` or `closed`, `now` is inside
+   * `opensAt`..`closesAt`, and fewer than `maxResponses` have been completed. Pass `responses` (the number of
+   * completed responses so far) to check `maxResponses`; it is ignored otherwise.
+   */
+  availability({ now = new Date(), responses }: { now?: Date; responses?: number } = {}): Availability {
+    if (this.status === 'draft' || this.status === 'closed') {
+      return { accepting: false, reason: this.status };
+    }
+    const time = now.getTime();
+    if (this.opensAt !== undefined && time < Date.parse(this.opensAt)) {
+      return { accepting: false, reason: 'not_yet_open' };
+    }
+    if (this.closesAt !== undefined && time >= Date.parse(this.closesAt)) {
+      return { accepting: false, reason: 'past_close' };
+    }
+    if (this.maxResponses !== undefined && responses !== undefined && responses >= this.maxResponses) {
+      return { accepting: false, reason: 'full' };
+    }
+    return { accepting: true };
+  }
+
+  /** Shorthand for `availability(options).accepting`. */
+  isAcceptingResponses(options: { now?: Date; responses?: number } = {}): boolean {
+    return this.availability(options).accepting;
+  }
+
   toJSON(): SurveyDefinitionJSON {
     return {
       schemaVersion: SCHEMA_VERSION,
@@ -181,6 +246,10 @@ export class SurveyDefinition {
       ...(Object.keys(this.variables).length > 0 ? { variables: this.variables } : {}),
       ...(this.defaultLocale === undefined ? {} : { defaultLocale: this.defaultLocale }),
       ...(Object.keys(this.translations).length > 0 ? { translations: this.translations } : {}),
+      ...(this.status === undefined ? {} : { status: this.status }),
+      ...(this.opensAt === undefined ? {} : { opensAt: this.opensAt }),
+      ...(this.closesAt === undefined ? {} : { closesAt: this.closesAt }),
+      ...(this.maxResponses === undefined ? {} : { maxResponses: this.maxResponses }),
     };
   }
 

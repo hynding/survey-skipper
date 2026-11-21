@@ -138,6 +138,35 @@ void test('responses export as CSV and JSON', async () => {
   assert.ok(json.body.rows.some((row) => row.ending === 'too_young' && row.age === 12));
 });
 
+void test('closed, draft, scheduled and full surveys refuse new sessions', async () => {
+  const lifecycleStore = new MemoryStore();
+  const own = await start({ store: lifecycleStore, apiKey: 'secret', now: () => new Date('2026-05-01T00:00:00Z') });
+  try {
+    const q = [{ id: 'q' }];
+    await lifecycleStore.saveDefinition({ id: 'draft', status: 'draft', questions: q });
+    await lifecycleStore.saveDefinition({ id: 'closed', status: 'closed', questions: q });
+    await lifecycleStore.saveDefinition({ id: 'later', opensAt: '2026-06-01T00:00:00Z', questions: q });
+    await lifecycleStore.saveDefinition({ id: 'full', maxResponses: 1, questions: q });
+    const refused = async (id: string) => own.call<{ reason?: string }>('POST', `/definitions/${id}/sessions`);
+    assert.deepEqual([(await refused('closed')).status, (await refused('closed')).body.reason], [403, 'closed']);
+    assert.equal((await refused('later')).body.reason, 'not_yet_open');
+    assert.equal((await refused('draft')).body.reason, 'draft');
+    assert.equal((await own.call('POST', '/definitions/draft/sessions', {}, admin)).status, 201, 'creators can preview drafts');
+    const first = await own.call<SessionView>('POST', '/definitions/full/sessions');
+    assert.equal(first.status, 201);
+    await own.call('POST', `/sessions/${first.body.sessionId}/answers`, { value: 'yes' });
+    await own.call('POST', `/sessions/${first.body.sessionId}/next`);
+    assert.equal((await refused('full')).body.reason, 'full');
+    const list = await own.call<{ id: string; accepting: boolean; reason?: string }[]>('GET', '/definitions');
+    assert.deepEqual(
+      Object.fromEntries(list.body.map((d) => [d.id, d.reason ?? 'open'])),
+      { draft: 'draft', closed: 'closed', later: 'not_yet_open', full: 'full' },
+    );
+  } finally {
+    own.server.close();
+  }
+});
+
 void test('sessions can be deleted', async () => {
   const { body } = await call<SessionView>('POST', '/definitions/commute/sessions');
   assert.equal((await call('DELETE', `/sessions/${body.sessionId}`)).status, 204);

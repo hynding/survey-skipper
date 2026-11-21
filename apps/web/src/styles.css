@@ -80,3 +80,4 @@ main:has(.builder) { max-width: 80rem; }
 .preview .question { background: var(--bg); }
 .preview .actions button { font: inherit; padding: 0.5rem 1rem; border-radius: 0.5rem; border: 1px solid var(--accent); background: var(--accent); color: var(--card); }
 .preview .actions button[type='button'] { background: transparent; color: var(--accent); }
+.badge { margin-left: 0.5rem; font-size: 0.75rem; padding: 0.1rem 0.5rem; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }

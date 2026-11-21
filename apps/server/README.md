@@ -36,11 +36,11 @@ All bodies are JSON. 🔑 marks creator routes that need the API key when one is
 | Route | What it does |
 | --- | --- |
 | `GET /health` | `{ ok: true }` |
-| `GET /definitions` | Latest version of every definition: id, version, title, description, question count. |
+| `GET /definitions` | Latest version of every definition: id, version, title, description, status, open window, question count, and `accepting` / `reason` (see below). |
 | 🔑 `POST /definitions` | Save a definition (JSON, or YAML with `Content-Type: application/yaml`). It needs an `id`. Returns `{ definition, lint }`. |
 | `GET /definitions/:id?version=` | A definition, latest version by default. |
 | `GET /definitions/:id/lint` | Lint issues for a definition. |
-| `POST /definitions/:id/sessions` | Start a session. Body: `{ context?, version? }`. Returns a session view (201). |
+| `POST /definitions/:id/sessions` | Start a session. Body: `{ context?, version? }`. Returns a session view (201), or 403 with a `reason` when the survey is not taking responses (see below). |
 | 🔑 `GET /definitions/:id/sessions` | Saved sessions for a definition. |
 | 🔑 `GET /definitions/:id/stats?version=` | `aggregate()` over its sessions: completion, endings, distributions, drop-off, paths. |
 | 🔑 `GET /definitions/:id/responses.csv` | One row per session as CSV (`toCSV()`), as a download. Query: `version`, and `abandoned=1`, `timings=1`, `context=1` for extra columns. |
@@ -52,6 +52,13 @@ All bodies are JSON. 🔑 marks creator routes that need the API key when one is
 | `POST /sessions/:sid/goto` | Jump along the respondent's route. Body: `{ questionId }`. 409 if the question is off the route. |
 | `PUT /sessions/:sid/context` | Replace the session's context. |
 | `DELETE /sessions/:sid` | Delete a session. |
+
+### When a survey takes responses
+
+A definition's `status`, `opensAt`, `closesAt` and `maxResponses` decide whether new sessions can start. When they
+can't, starting one returns 403 with `reason`: `draft`, `closed`, `not_yet_open`, `past_close` or `full`
+(`maxResponses` completed sessions across all versions). Sessions already started can still be finished. Creators can
+start sessions on a draft with the API key, to preview it. Pass `now` to `createHandler` to control the clock.
 
 A session view looks like this:
 

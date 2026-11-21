@@ -67,6 +67,26 @@
         },
         "additionalProperties": false
       }
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "open",
+        "closed"
+      ],
+      "description": "draft and closed surveys take no new responses. Unset behaves like open."
+    },
+    "opensAt": {
+      "type": "string",
+      "description": "ISO 8601 date-time."
+    },
+    "closesAt": {
+      "type": "string",
+      "description": "ISO 8601 date-time."
+    },
+    "maxResponses": {
+      "type": "integer",
+      "minimum": 0
     }
   },
   "additionalProperties": false,
