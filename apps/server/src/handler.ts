@@ -20,6 +20,7 @@ import {
   type ValidationError,
 } from 'survey-skipper';
 import { parseSurvey } from 'survey-skipper-yaml';
+import { WebhookSender, type Webhook, type WebhookEvent, type WebhookPayload } from './webhooks.js';
 
 export interface HandlerOptions {
   store: SurveyStore;
@@ -34,8 +35,10 @@ export interface HandlerOptions {
   maxBodyBytes?: number;
   /** Makes session ids. Default `crypto.randomUUID`. */
   newId?: () => string;
-  /** The clock used for `opensAt` / `closesAt`. Default `() => new Date()`. */
+  /** The clock used for `opensAt` / `closesAt` and webhook timestamps. Default `() => new Date()`. */
   now?: () => Date;
+  /** URLs to POST session events to. See {@link Webhook}. */
+  webhooks?: Webhook[] | WebhookSender;
 }
 
 export type Handler = (req: IncomingMessage, res: ServerResponse) => Promise<void>;
@@ -108,6 +111,20 @@ export function createHandler(options: HandlerOptions): Handler {
   const maxBody = options.maxBodyBytes ?? 1_000_000;
   const newId = options.newId ?? randomUUID;
   const now = options.now ?? (() => new Date());
+  const webhooks = options.webhooks instanceof WebhookSender ? options.webhooks : new WebhookSender(options.webhooks ?? []);
+
+  const notify = (event: WebhookEvent, sessionId: string, session: SurveySession, extra: Partial<WebhookPayload> = {}) => {
+    const state = session.toJSON();
+    webhooks.dispatch({
+      event,
+      at: now().toISOString(),
+      sessionId,
+      definitionId: state.definitionId,
+      definitionVersion: state.definitionVersion,
+      ...extra,
+      session: state,
+    });
+  };
 
   const loadDefinition = async (id: string, version?: string | null): Promise<SurveyDefinition> => {
     const definition = await store.loadDefinition(id, version ?? undefined);
@@ -149,7 +166,14 @@ export function createHandler(options: HandlerOptions): Handler {
   };
 
   const save = async (sessionId: string, session: SurveySession): Promise<SessionView> => {
+    const before = await store.loadSession(sessionId);
     await store.saveSession(sessionId, session);
+    if (before === undefined) {
+      notify('start', sessionId, session);
+    }
+    if (!before?.finished && session.getQuestion() === null) {
+      notify('complete', sessionId, session, session.ending === undefined ? {} : { ending: session.ending });
+    }
     return view(sessionId, session);
   };
 
@@ -290,7 +314,9 @@ export function createHandler(options: HandlerOptions): Handler {
         if (!result.ok) {
           throw new HttpError(422, 'The answer is not valid', { errors: { [String(question.id)]: result.errors } });
         }
-        return [200, await save(sid, session)];
+        const saved = await save(sid, session);
+        notify('answer', sid, session, { questionId: question.id });
+        return [200, saved];
       },
     },
     {

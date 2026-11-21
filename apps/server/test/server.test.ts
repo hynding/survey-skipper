@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
 import { MemoryStore, valueKey, type SurveyStore } from 'survey-skipper';
-import { createHandler, FileStore, type HandlerOptions, type SessionView } from '../src/index.js';
+import { createHandler, FileStore, signWebhook, WebhookSender, type HandlerOptions, type SessionView, type WebhookPayload } from '../src/index.js';
 
 const definition = {
   id: 'commute',
@@ -207,6 +207,53 @@ void test('full quotas screen respondents out', async () => {
   assert.deepEqual([vip.body.finished, vip.body.ending], [true, 'over_quota']);
   const status = await call<{ id: string; count: number; full: boolean }[]>('GET', '/definitions/quota/quotas', undefined, admin);
   assert.deepEqual(status.body.map((q) => [q.id, q.count, q.full]), [['cats', 1, true], ['vip', 0, true]]);
+});
+
+void test('webhooks receive signed events and are retried', async () => {
+  const received: { event: string; signature: string | undefined; body: string }[] = [];
+  let failuresLeft = 1;
+  const receiver = createServer((req, res) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (c: Buffer) => chunks.push(c));
+    req.on('end', () => {
+      if (failuresLeft-- > 0) {
+        res.writeHead(500).end();
+        return;
+      }
+      received.push({ event: String(req.headers['x-survey-skipper-event']), signature: req.headers['x-survey-skipper-signature'] as string | undefined, body: Buffer.concat(chunks).toString() });
+      res.writeHead(204).end();
+    });
+  });
+  await new Promise<void>((resolve) => receiver.listen(0, resolve));
+  const url = `http://localhost:${String((receiver.address() as AddressInfo).port)}/hook`;
+  const errors: string[] = [];
+  const sender = new WebhookSender(
+    [
+      { url, secret: 'shh', events: ['start', 'complete'] },
+      { url: 'http://localhost:1/unreachable', events: ['answer'], definitions: ['hooked'] },
+    ],
+    { retryDelayMs: 5, attempts: 2, onError: (error) => errors.push(error.message) },
+  );
+  const hookStore = new MemoryStore();
+  await hookStore.saveDefinition({ id: 'hooked', questions: [{ id: 'q', rules: [{ end: 'thanks' }] }] });
+  const own = await start({ store: hookStore, webhooks: sender });
+  try {
+    const { body } = await own.call<SessionView>('POST', '/definitions/hooked/sessions');
+    await own.call('POST', `/sessions/${body.sessionId}/answers`, { value: 'hi' });
+    await own.call('POST', `/sessions/${body.sessionId}/next`);
+    await sender.idle();
+    // The first delivery failed once and was retried, so events can arrive out of order.
+    assert.deepEqual(received.map((r) => r.event).sort(), ['complete', 'start']);
+    for (const r of received) {
+      assert.equal(r.signature, signWebhook(r.body, 'shh'));
+    }
+    const complete = JSON.parse(received.find((r) => r.event === 'complete')?.body ?? '{}') as WebhookPayload;
+    assert.deepEqual([complete.sessionId, complete.definitionId, complete.ending, complete.session.answers?.q?.value], [body.sessionId, 'hooked', 'thanks', 'hi']);
+    assert.equal(errors.length, 1, 'the unreachable answer hook gave up after its attempts');
+  } finally {
+    own.server.close();
+    receiver.close();
+  }
 });
 
 void test('sessions can be deleted', async () => {

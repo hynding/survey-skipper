@@ -16,6 +16,9 @@ PORT=3000 DATA_DIR=./data API_KEY=change-me CORS_ORIGIN='*' pnpm --filter survey
 | `DATA_DIR` | unset (in memory) | Keep definitions and sessions as JSON files in this directory (`FileStore`). |
 | `API_KEY` | unset (open) | Require `Authorization: Bearer <key>` on creator routes. |
 | `CORS_ORIGIN` | unset (off) | Value for `Access-Control-Allow-Origin`, for browser apps on another origin. |
+| `WEBHOOK_URLS` | unset | Comma-separated URLs to POST session events to (see Webhooks). |
+| `WEBHOOK_SECRET` | unset | Signs webhook deliveries. |
+| `WEBHOOK_EVENTS` | `complete` | Comma-separated events to send: `start`, `answer`, `complete`. |
 
 ## Use it in your own server
 
@@ -60,6 +63,22 @@ A definition's `status`, `opensAt`, `closesAt` and `maxResponses` decide whether
 can't, starting one returns 403 with `reason`: `draft`, `closed`, `not_yet_open`, `past_close` or `full`
 (`maxResponses` completed sessions across all versions). Sessions already started can still be finished. Creators can
 start sessions on a draft with the API key, to preview it. Pass `now` to `createHandler` to control the clock.
+
+### Webhooks
+
+Pass `webhooks` to `createHandler` to POST session events to other systems:
+
+```ts
+createHandler({ store, webhooks: [{ url: 'https://example.com/hooks/survey', secret: process.env.HOOK_SECRET, events: ['complete'] }] });
+```
+
+Each delivery is a JSON `WebhookPayload`: `event` (`start`, `answer` or `complete`), `at`, `sessionId`,
+`definitionId`, `definitionVersion`, `ending` (for `complete`), `questionId` (for `answer`) and the full `session`
+state. Headers: `X-Survey-Skipper-Event`, and with a secret `X-Survey-Skipper-Signature: sha256=<hex HMAC-SHA256 of the
+body>`; check it with `signWebhook(body, secret)`. A webhook can be limited to some `definitions`. Deliveries run in
+the background, so they never slow down respondents, and a failed delivery (network error or non-2xx) is retried with
+backoff (3 attempts by default), so events can arrive out of order. For control over retries, timeouts and error
+reporting, pass `new WebhookSender(webhooks, { attempts, retryDelayMs, timeoutMs, onError })` instead of the list.
 
 ### Quotas
 
