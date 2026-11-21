@@ -58,7 +58,7 @@ It returns:
 | --- | --- |
 | `question` | The current question, or `null` when finished. |
 | `page` | The questions on the current page (see `section` in the core docs). |
-| `answer(value, question?)` | Validates and stores an answer, to the current question by default. Returns whether it was accepted. |
+| `answer(value, question?)` | Validates and stores an answer, to the current question by default. Returns whether it was accepted. A plain object is read as `{ value, text? }`, so wrap a matrix answer: `answer({ value: { food: 3 } }, q)`. |
 | `valueOf(question)` | The stored answer value. |
 | `errors` | Validation errors by question id, from the last `answer` or `next`. |
 | `next()` | Validates every question on the page, then moves on. Returns `false` and fills `errors` if any fail. |
@@ -70,4 +70,10 @@ It returns:
 | `setContext(context)` | Replaces the context and re-renders. |
 | `session` | The underlying `SurveySession`. |
 
-Requires React 18 or later.
+Requires React 18 or later and `survey-skipper` 3.x (both peer dependencies).
+
+## Development
+
+This package lives in the [survey-skipper monorepo](https://github.com/hynding/survey-skipper). From this folder,
+`pnpm run check` runs typecheck, lint, tests (`node:test` with jsdom and Testing Library) and build. Build
+`survey-skipper` first.

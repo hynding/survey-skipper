@@ -6,7 +6,7 @@ responses and stats. It uses only Node's `http` module and any `SurveyStore`.
 ## Run it
 
 ```sh
-pnpm --filter survey-skipper-server build
+pnpm --filter survey-skipper-server build   # after building its dependencies (or run `pnpm run build` at the root)
 PORT=3000 DATA_DIR=./data API_KEY=change-me CORS_ORIGIN='*' pnpm --filter survey-skipper-server start
 ```
 
@@ -20,6 +20,9 @@ PORT=3000 DATA_DIR=./data API_KEY=change-me CORS_ORIGIN='*' pnpm --filter survey
 | `WEBHOOK_SECRET` | unset | Signs webhook deliveries. |
 | `WEBHOOK_EVENTS` | `complete` | Comma-separated events to send: `start`, `answer`, `complete`. |
 
+Without `DATA_DIR`, everything is lost when the process stops. `pnpm --filter survey-skipper-server dev` runs from
+source with tsx. Installed from npm, the same is available as the `survey-skipper-server` command.
+
 ## Use it in your own server
 
 ```ts
@@ -30,7 +33,20 @@ const handler = createHandler({ store: new FileStore('./data'), apiKey: process.
 createServer((req, res) => void handler(req, res)).listen(3000);
 ```
 
-Any `SurveyStore` works, so you can plug in your own database adapter.
+Any `SurveyStore` works, so you can plug in your own database adapter. `FileStore(dir)` keeps one JSON file per key;
+its `FileStorage` key-value layer is exported too. `createHandler` options:
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `store` | required | Where definitions and sessions live. |
+| `apiKey` | unset (open) | Required as `Authorization: Bearer <key>` on creator routes. |
+| `corsOrigin` | unset (off) | Sets the CORS headers and answers `OPTIONS` preflights. |
+| `maxBodyBytes` | 1 MB | Largest accepted request body. |
+| `newId` | `crypto.randomUUID` | Makes session ids. |
+| `now` | `() => new Date()` | Clock for `opensAt` / `closesAt` and webhook timestamps. |
+| `webhooks` | none | A list of webhooks, or a `WebhookSender` (see Webhooks). |
+
+`view(sessionId, session)` builds the session view the routes return, if you add routes of your own.
 
 ## Routes
 
@@ -104,4 +120,14 @@ A session view looks like this:
 `question` and `page` items are the definition's question JSON plus `displayText`, the text in the session's locale
 with placeholders filled in. `state` is the full `session.toJSON()`.
 
-Errors are `{ "error": "message" }`, plus `errors` keyed by question id for validation failures.
+`ending` is the named ending once the session finishes (omitted while it is unset).
+
+Errors are `{ "error": "message" }`, plus `errors` keyed by question id for validation failures. Status codes: 400 for
+a malformed body or definition, 401 for a creator route without the key, 403 when the survey is not taking responses,
+404 for an unknown route, definition or session, 405 (with `Allow`) for a known path with the wrong method, 409 for
+Back or jump with nowhere to go, 413 for an oversized body, 422 for invalid answers.
+
+## Development
+
+From this folder, `pnpm run check` runs typecheck, lint, tests (`node:test` against an in-process server) and build.
+Build `survey-skipper` and `survey-skipper-yaml` first.

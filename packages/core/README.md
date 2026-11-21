@@ -1,6 +1,8 @@
-# Survey Skipper
+# survey-skipper
 
 Customizable surveys whose path branches on rules and context. Framework-agnostic: bring your own UI and storage.
+This is the core library of the [Survey Skipper monorepo](https://github.com/hynding/survey-skipper); YAML, React, an
+HTTP server and a web app build on it.
 
 Written in TypeScript and published as both ES modules and CommonJS, with type declarations.
 
@@ -49,6 +51,33 @@ session.setAnswer({ value: 12 });
 session.getNextQuestion();      // => null
 session.ending;                 // => 'too_young'
 ```
+
+### Definition fields at a glance
+
+Every field is optional except a question's `id`. Each is covered in the sections below.
+
+| Survey field | What it does |
+| --- | --- |
+| `id`, `version`, `title`, `description` | Identity and display text. Stores key definitions by `id` and `version`. |
+| `questions` | The questions, in order. |
+| `variables` | Named JsonLogic expressions, readable as `vars.<name>`. |
+| `sections` | Per-section settings, e.g. `{ ratings: { randomize: true } }`. |
+| `quotas` | Caps on completed responses matching a condition. |
+| `status`, `opensAt`, `closesAt`, `maxResponses` | When the survey takes new responses. |
+| `defaultLocale`, `translations` | Translated `title` and `description`. |
+| `keepAbandonedAnswers` | `false` discards answers on a route the respondent left (default: keep them). |
+| `answerMap`, `customKey` | The older value-based branching (see More). |
+
+| Question field | What it does |
+| --- | --- |
+| `id`, `text` | Identity and text, which can include `{{...}}` placeholders. |
+| `type`, `required`, `validation` | Expected answer and checks. |
+| `answers`, `rows` | Answer options (`value`, plus optional `text`, `score`, `fixed`, and `isCustom` for a free-text "Other" option), and matrix rows. |
+| `answersFrom` | Carry options forward from an earlier question. |
+| `randomize` | Shuffle the answer options. |
+| `rules`, `showIf`, `skipIf` | Branching. |
+| `section` | Groups consecutive questions into a page. |
+| `translations` | Translated text and option text. |
 
 ### Rules and context
 
@@ -174,7 +203,7 @@ Give answer options a `score` to build quizzes, assessments or lead scoring:
 { id: 'capital', section: 'geo', type: 'single', answers: [{ value: 'paris', score: 2 }, { value: 'lyon', score: 0 }] }
 ```
 
-`session.getScore()` returns `{ total, sections }`: the points of every option picked (each picked option of a multi
+`session.getScore()` returns `{ total, sections }` (`scoreAnswers(definition, answers)` does the same without a session): the points of every option picked (each picked option of a multi
 answer counts), with totals per question `section`. Custom answers score the question's custom option. Rules,
 `showIf`, variables and piped text can read `score` and `scores.<section>`, for example
 `{ if: { '>=': [{ var: 'score' }, 4] }, end: 'pass' }` or `"You scored {{score}}"`. Pass the definition as the second
@@ -227,7 +256,7 @@ quotas: [
 and `quotaStatus(...)` adds each `limit` and whether it is `full`. Pass the counts to a session as
 `new SurveySession(definition, state, { quotaCounts })`: moving forward then finishes a respondent who matches a full
 quota on its `end` ending (default `over_quota`). `session.checkQuotas()` does the same check on demand, for example
-right after setting context on a new session. Without `quotaCounts`, quotas are not enforced. `survey-skipper-server`
+right after setting context on a new session. `OVER_QUOTA` is the default ending's name. Without `quotaCounts`, quotas are not enforced. `survey-skipper-server`
 does all of this for you.
 
 ### Saving and restoring
@@ -320,7 +349,7 @@ toMermaid(definition);                                   // a flowchart of the b
   `lt`, `lte`, `oneOf`, `includes`, `answered`, `matches`, `and`, `or`, `not`, `v`. `.toInput()` gives the plain JSON
   instead of a definition.
 - **Lint:** `lintDefinition` reports duplicate ids, malformed rules, unknown targets, rules after an always-matching
-  rule, unreachable questions, conditions that read unknown questions, bad regular expressions and choice questions
+  rule, unreachable questions (`reachableIds(definition)` lists the reachable ones), conditions that read unknown questions, bad regular expressions and choice questions
   without options. Each issue has a `severity`, `code`, `message` and `questionId`.
 - **Routes:** `simulatePaths` follows every rule, answer-map entry and fall-through without evaluating conditions,
   so it shows the survey's shape. `runScript` runs a real session with scripted answers and shows the route a
