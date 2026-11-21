@@ -1,7 +1,16 @@
 # survey-skipper-web
 
-The web app for [survey-skipper-server](../server), with two parts: the respondent app (roadmap UI1) and the
-builder (UI2).
+The web app for [survey-skipper-server](../server): a survey list, the builder (roadmap UI2), the respondent app
+(UI1), a results dashboard (UI3), and share links and embeds (S4). It is a private workspace package (Vite 8 +
+React 19), not published to npm.
+
+| Route | Screen |
+| --- | --- |
+| `#/` | Every survey on the server, with a badge when it is not taking responses (draft, closed, full and so on), and links to answer, edit and see results. |
+| `#/builder`, `#/builder/<id>` | Write a new survey, or edit a saved one. |
+| `#/s/<id>?<context>` | Answer a survey. |
+| `#/embed/<id>?<context>` | The same, without the app header, for iframes. |
+| `#/results/<id>` | A survey's results. |
 
 ## Builder (`#/builder`, or `#/builder/<id>` to edit a saved survey)
 
@@ -10,7 +19,8 @@ builder (UI2).
 - **Graph** tab: questions in order, fall-through arrows, and rule and answer-map arcs (dashed when conditional, with
   the condition in a tooltip). It also shows the endings, and outlines questions with lint problems.
 - **Preview** tab: runs the survey in the browser with `survey-skipper-react`, with nothing saved.
-- Save sends the YAML to the server. If the server has an `API_KEY`, enter it once per browser session.
+- Save sends the YAML to the server. If the server has an `API_KEY`, enter it once per tab (it is kept in
+  `sessionStorage` and shared with Results).
 
 When you edit a saved survey, the builder lists the changes since the last save (`diffDefinitions()`) above the Save
 button.
@@ -59,3 +69,16 @@ app's origin, and serve `dist/`.
 ```sh
 VITE_API_URL=https://surveys-api.example.com pnpm --filter survey-skipper-web build
 ```
+
+## Code layout
+
+`src/App.tsx` parses the hash route, picks a screen and holds the `Embed` wrapper. One file per screen: `Home`, `Builder` (with `Graph` and
+`Preview`), `Respondent`, `Results` and `Share`. `QuestionField` renders an input
+for each question type and is shared by the respondent app and the preview. `api.ts` is the typed client for the
+server.
+
+## Development
+
+From this folder, `pnpm run check` runs typecheck, lint, tests and the Vite build. Tests use `node:test`, jsdom and
+Testing Library, and talk to a real `survey-skipper-server` handler started in-process, so build the other packages
+first (`pnpm run build` at the root).
