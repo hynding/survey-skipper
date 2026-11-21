@@ -12,6 +12,9 @@ builder (UI2).
 - **Preview** tab: runs the survey in the browser with `survey-skipper-react`, with nothing saved.
 - Save sends the YAML to the server. If the server has an `API_KEY`, enter it once per browser session.
 
+When you edit a saved survey, the builder lists the changes since the last save (`diffDefinitions()`) above the Save
+button.
+
 ## Respondent app (`#/s/<id>`)
 
 - Every built-in question type: single and multi choice, text, number, rating, date, yes/no, ranking (move options up and down) and matrix (a radio grid).

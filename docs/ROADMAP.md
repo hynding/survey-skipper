@@ -1,7 +1,7 @@
 # Survey Skipper roadmap
 
-Status: the first round (sections 1 to 5) is fully built. A second round of features was proposed on 2026-11-21 and
-is tracked in section 6, in build order.
+Status: both rounds are fully built. The first round is in sections 1 to 5; the second round (proposed and built on
+2026-11-21) is in section 6.
 
 Goal of the project: **create, manage, track, share and extend customizable surveys whose path branches on rules and
 context.** This plan maps that goal onto the library as it stands at v2.0.0 (strict TypeScript, PR #1).
@@ -232,7 +232,7 @@ Items are listed in the order they will be built. IDs continue the first round's
 | 9 | SV2 | ✅ Built (server 0.8). **Webhooks.** Server option to POST session events (`complete`, optionally `answer`) to configured URLs, signed with an HMAC header, with retries. | server | S |
 | 10 | S4 | ✅ Built (`apps/web` 0.5). **Embedding and share links.** `#/embed/<id>` renders a survey without the app chrome and posts `survey-skipper:complete` to the parent window; the builder shows a share link and an iframe snippet. | web | S |
 | 11 | R9 | ✅ Built (core 3.14). **`skipped` operator** (left over from R2): true when a question was routed past, so later rules can react to it. | core | S |
-| 12 | M5 | **Definition diff.** `diffDefinitions(a, b)` lists added, removed and changed questions, options and rules; the builder shows the diff against the saved version before saving. | core, web | M |
+| 12 | M5 | ✅ Built (core 3.15, `apps/web` 0.6). **Definition diff.** `diffDefinitions(a, b)` lists added, removed and changed questions, options and rules; the builder shows the diff against the saved version before saving. | core, web | M |
 
 ### Phases
 

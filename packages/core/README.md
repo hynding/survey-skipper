@@ -270,6 +270,10 @@ ran against.
   defusing spreadsheet formulas. Options: `includeAbandoned`, `includeTimings` (`time:<id>` columns) and
   `includeContext` (`context:<key>` columns). Sessions can be live, saved JSON, or `{ sessionId, state }` entries from
   `store.listSessions()`.
+- **Diff:** `diffDefinitions(before, after)` lists what changed between two definitions: survey settings, questions
+  added, removed, moved or edited field by field, and answer options added, removed, moved or edited (matched by
+  value). Each change has a `kind`, `target`, `questionId` / `option` where relevant, `before` / `after` and a one-line
+  `message`.
 - **Versioning:** `migrateSession(savedState, newDefinition)` moves a saved session onto a changed definition.
   Answers to removed questions, or answers that no longer validate, move to `abandonedAnswers`. If the respondent's
   current question was removed, the session resumes at its first unanswered question. It returns the new state and a
