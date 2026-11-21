@@ -1,4 +1,4 @@
-import type { AnswerValue, ValidationError } from 'survey-skipper';
+import type { AnswerValue, ScalarValue, ValidationError } from 'survey-skipper';
 import type { QuestionView } from './api';
 
 export interface QuestionFieldProps {
@@ -12,13 +12,14 @@ export interface QuestionFieldProps {
 }
 
 interface Option {
-  value: AnswerValue;
+  value: ScalarValue;
   label: string;
 }
 
-function options(question: QuestionView): Option[] {
-  return (question.answers ?? []).map((a) => {
-    const value = (a as { value?: AnswerValue }).value ?? '';
+/** Answer options (or matrix rows). Their values are always scalars. */
+function options(list: QuestionView['answers']): Option[] {
+  return (list ?? []).map((a) => {
+    const value = (a as { value?: ScalarValue }).value ?? '';
     const text = (a as { text?: string }).text;
     return { value, label: text ?? String(value) };
   });
@@ -29,7 +30,7 @@ export function QuestionField({ question, value, onChange, errors = [], restored
   const id = `q-${String(question.id)}`;
   const errorId = `${id}-errors`;
   const described = errors.length > 0 ? errorId : undefined;
-  const opts = options(question);
+  const opts = options(question.answers);
   const type = question.type ?? (opts.length > 0 ? 'single' : 'text');
 
   let input;
@@ -56,13 +57,82 @@ export function QuestionField({ question, value, onChange, errors = [], restored
                 type="checkbox"
                 checked={selected.includes(o.value as never)}
                 onChange={(e) => {
-                  onChange((e.target.checked ? [...selected, o.value] : selected.filter((v) => v !== o.value)) as AnswerValue);
+                  onChange((e.target.checked ? [...selected, o.value] : selected.filter((v) => v !== o.value)));
                 }}
               />
               {o.label}
             </label>
           ))}
         </div>
+      );
+      break;
+    }
+    case 'ranking': {
+      const values = opts.map((o) => o.value);
+      const ranked = Array.isArray(value) ? value : [];
+      const order = [...ranked, ...values.filter((v) => !ranked.includes(v))];
+      const top = Math.min(question.validation?.maxSelected ?? values.length, values.length);
+      const commit = (next: ScalarValue[]) => {
+        onChange(next.slice(0, top));
+      };
+      const move = (from: number, to: number) => {
+        const next = [...order];
+        const [item] = next.splice(from, 1);
+        if (item !== undefined) {
+          next.splice(to, 0, item);
+        }
+        commit(next);
+      };
+      const label = (v: ScalarValue) => opts.find((o) => o.value === v)?.label ?? String(v);
+      input = (
+        <div aria-labelledby={`${id}-label`} aria-describedby={described} role="group">
+          <ol className="ranking">
+            {order.map((v, i) => (
+              <li key={String(v)} className={i < top ? 'ranked' : 'unranked'}>
+                <span>{label(v)}</span>
+                <button type="button" aria-label={`Move ${label(v)} up`} disabled={i === 0} onClick={() => { move(i, i - 1); }}>↑</button>
+                <button type="button" aria-label={`Move ${label(v)} down`} disabled={i === order.length - 1} onClick={() => { move(i, i + 1); }}>↓</button>
+              </li>
+            ))}
+          </ol>
+          {ranked.length === 0 ? (
+            <button type="button" onClick={() => { commit(order); }}>Keep this order</button>
+          ) : null}
+          {top < values.length ? <p className="note">Your top {top} count.</p> : null}
+        </div>
+      );
+      break;
+    }
+    case 'matrix': {
+      const rows = options(question.rows).map((row) => ({ value: String(row.value), label: row.label }));
+      const picked = value !== undefined && typeof value === 'object' && !Array.isArray(value) ? value : {};
+      input = (
+        <table className="matrix" aria-labelledby={`${id}-label`} aria-describedby={described}>
+          <thead>
+            <tr>
+              <td />
+              {opts.map((o) => <th key={String(o.value)} scope="col">{o.label}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.value}>
+                <th scope="row">{row.label}</th>
+                {opts.map((o) => (
+                  <td key={String(o.value)}>
+                    <input
+                      type="radio"
+                      name={`${id}-${row.value}`}
+                      aria-label={`${row.label}: ${o.label}`}
+                      checked={picked[row.value] === o.value}
+                      onChange={() => { onChange({ ...picked, [row.value]: o.value }); }}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       );
       break;
     }

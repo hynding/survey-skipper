@@ -1,4 +1,4 @@
-import { Answer, type AnswerInput, type AnswerValue } from './answer.js';
+import { Answer, valueKey, type AnswerInput, type AnswerValue } from './answer.js';
 import { SCHEMA_VERSION, SurveyDefinition, type SurveyDefinitionInput } from './definition.js';
 import type { Question, QuestionId } from './question.js';
 import { compute, evaluate, type RuleData } from './rules.js';
@@ -208,7 +208,7 @@ export class SurveySession {
   /** An answer option's text in the session's locale, falling back to its own `text`. */
   getAnswerText(answer: Answer, question?: Question | null): string {
     const q = question ?? this.getQuestion();
-    const key = Array.isArray(answer.value) ? answer.value.map(String).join(',') : String(answer.value);
+    const key = valueKey(answer.value);
     const translated = q ? this.pick(q.translations, (t) => t.answers?.[key]) : undefined;
     return translated ?? answer.text ?? '';
   }
@@ -250,7 +250,7 @@ export class SurveySession {
     }
     const answer = this.answers[String(source.id)];
     const picked = answer?.isValid() ? (Array.isArray(answer.value) ? answer.value : [answer.value]).map(String) : [];
-    return sourceOptions.filter((a) => picked.includes(String(a.value)) === (include === 'selected'));
+    return sourceOptions.filter((a) => picked.includes(valueKey(a.value)) === (include === 'selected'));
   }
 
   /** The survey title in the session's locale. */

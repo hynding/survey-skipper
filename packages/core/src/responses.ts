@@ -1,5 +1,5 @@
 import { timeOnQuestions } from './analytics.js';
-import type { AnswerInput, AnswerValue } from './answer.js';
+import { formatAnswerValue, isMatrix, valueKey, type AnswerInput, type AnswerValue } from './answer.js';
 import { SurveyDefinition, type SurveyDefinitionInput } from './definition.js';
 import { SurveySession, type SessionState } from './session.js';
 
@@ -31,7 +31,8 @@ const META_COLUMNS = ['sessionId', 'definitionVersion', 'finished', 'ending', 's
 
 /**
  * Turns sessions into one row per respondent: session metadata, then one column per question in the definition's
- * order (blank when not answered), then any extra columns asked for in `options`. Answers to questions no longer in
+ * order (blank when not answered; a matrix question gets a `<id>:<row>` column per row), then any extra columns asked
+ * for in `options`. Answers to questions no longer in
  * the definition get their own columns after the definition's questions.
  */
 export function toRows(
@@ -68,10 +69,18 @@ export function toRows(
       }
     }
   }
-  const answerColumns = [...questionIds, ...extra];
+  // A matrix question gets one column per row, named `<questionId>:<row>`.
+  const answerColumns: { column: string; id: string; row?: string }[] = [
+    ...def.questions.flatMap((q) =>
+      q.type === 'matrix' && q.rows?.length
+        ? q.rows.map((row) => ({ column: `${String(q.id)}:${valueKey(row.value)}`, id: String(q.id), row: valueKey(row.value) }))
+        : [{ column: String(q.id), id: String(q.id) }],
+    ),
+    ...extra.map((id) => ({ column: id, id })),
+  ];
   const columns = [
     ...META_COLUMNS,
-    ...answerColumns,
+    ...answerColumns.map((c) => c.column),
     ...abandonedIds.map((id) => `abandoned:${id}`),
     ...(options.includeTimings ? questionIds.map((id) => `time:${id}`) : []),
     ...contextKeys.map((key) => `context:${key}`),
@@ -90,8 +99,9 @@ export function toRows(
       completedAt,
       durationMs: startedAt !== null && completedAt !== null ? Date.parse(completedAt) - Date.parse(startedAt) : null,
     };
-    for (const id of answerColumns) {
-      row[id] = cell(state.answers?.[id]);
+    for (const { column, id, row: matrixRow } of answerColumns) {
+      const value = state.answers?.[id]?.value;
+      row[column] = matrixRow === undefined ? cell(state.answers?.[id]) : isMatrix(value) ? (value[matrixRow] ?? null) : null;
     }
     for (const id of abandonedIds) {
       row[`abandoned:${id}`] = cell(state.abandonedAnswers?.[id]);
@@ -143,6 +153,9 @@ function cell(answer: { value?: AnswerInput['value'] } | undefined): CellValue {
   const value: AnswerValue | undefined | null = answer?.value;
   if (value === undefined || value === null || value === '') {
     return null;
+  }
+  if (isMatrix(value)) {
+    return formatAnswerValue(value);
   }
   return Array.isArray(value) ? [...value] : value;
 }

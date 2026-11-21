@@ -1,4 +1,4 @@
-import type { Answer, AnswerInput } from './answer.js';
+import { isMatrix, valueKey, type Answer, type AnswerInput } from './answer.js';
 import type { SurveyDefinition } from './definition.js';
 
 /** A respondent's score: the total, and the part from each section. */
@@ -20,7 +20,7 @@ export function scoreAnswers(
   for (const question of definition.questions) {
     const answer = answers[String(question.id)];
     const value = answer?.value;
-    if (value === undefined || value === null || value === '') {
+    if (value === undefined || value === null || value === '' || isMatrix(value)) {
       continue;
     }
     const scored = question.answers.filter((a) => a.score !== undefined);
@@ -29,7 +29,7 @@ export function scoreAnswers(
     }
     let points = 0;
     for (const item of Array.isArray(value) ? value : [value]) {
-      const option = scored.find((a) => !a.isCustom && String(a.value) === String(item)) ?? scored.find((a) => a.isCustom);
+      const option = scored.find((a) => !a.isCustom && valueKey(a.value) === String(item)) ?? scored.find((a) => a.isCustom);
       points += option?.score ?? 0;
     }
     result.total += points;
