@@ -49,6 +49,8 @@ export interface SessionState {
   ending?: string;
   /** What happened so far, oldest first. */
   timeline?: TimelineEvent[];
+  /** Seeds the session's shuffled option and section order, so it stays the same across back, resume and reload. */
+  seed?: number;
 }
 
 /** Something that happened in a session, with when it happened. */
@@ -68,6 +70,8 @@ export interface TimelineEvent {
 export interface SessionOptions {
   /** The clock used for timeline timestamps. Defaults to the system clock. */
   now?: () => Date;
+  /** Makes the seed for a new session's shuffled order. Defaults to `Math.random`-based. */
+  random?: () => number;
 }
 
 /** What {@link SurveySession.toJSON} returns. */
@@ -80,6 +84,7 @@ export interface SessionJSON extends SessionState {
   finished: boolean;
   context: Record<string, unknown>;
   timeline: TimelineEvent[];
+  seed: number;
 }
 
 /**
@@ -118,6 +123,16 @@ export class SurveySession {
    * Saved with the session.
    */
   timeline: TimelineEvent[];
+  /** Seeds this session's shuffled order. Saved with the session. */
+  readonly seed: number;
+  /**
+   * The order questions are asked in when no rule or answer map says otherwise: the definition's order, with
+   * randomized sections shuffled. `order[position]` is a question index; `positions[index]` is the reverse.
+   */
+  private readonly order: number[];
+  private readonly positions: number[];
+  /** For each randomized section block, the definition index of its first question → the shuffled first. */
+  private readonly blockEntry = new Map<number, number>();
   private readonly now: () => Date;
   private readonly listeners = new Map<keyof SessionEvents, Set<(event: never) => void>>();
 
@@ -136,10 +151,19 @@ export class SurveySession {
     this.ending = state.ending;
     this.timeline = (state.timeline ?? []).map((event) => ({ ...event }));
     this.now = options.now ?? (() => new Date());
+    this.seed = state.seed ?? Math.floor((options.random ?? Math.random)() * 2 ** 32);
+    this.order = this.questions.map((_q, i) => i);
+    this.shuffleSections();
+    this.positions = [];
+    this.order.forEach((index, position) => {
+      this.positions[index] = position;
+    });
     if (state.finished) {
       this.index = this.questions.length;
     } else if (!isNil(state.currentQuestionId)) {
-      this.index = this.definition.indexOf(state.currentQuestionId) ?? 0;
+      this.index = this.definition.indexOf(state.currentQuestionId) ?? this.order[0] ?? 0;
+    } else {
+      this.index = this.order[0] ?? 0;
     }
     this.settled =
       !!state.finished || !isNil(state.currentQuestionId) || this.history.length > 0 || this.forward.length > 0;
@@ -186,6 +210,24 @@ export class SurveySession {
     const key = Array.isArray(answer.value) ? answer.value.map(String).join(',') : String(answer.value);
     const translated = q ? this.pick(q.translations, (t) => t.answers?.[key]) : undefined;
     return translated ?? answer.text ?? '';
+  }
+
+  /**
+   * The question's answer options in the order this respondent sees them: shuffled when the question has
+   * `randomize`, with `fixed` and custom options kept in place. The order is the same every time for a session.
+   */
+  getOptions(question?: Question | null): Answer[] {
+    const q = question ?? this.getQuestion();
+    if (!q) {
+      return [];
+    }
+    if (!q.randomize) {
+      return [...q.answers];
+    }
+    const movable = q.answers.filter((a) => !a.fixed && !a.isCustom);
+    shuffle(movable, random(this.seed ^ hash(String(q.id))));
+    let next = 0;
+    return q.answers.map((a) => (a.fixed || a.isCustom ? a : (movable[next++] ?? a)));
   }
 
   /** The survey title in the session's locale. */
@@ -513,7 +555,34 @@ export class SurveySession {
       context: this.context,
       timeline: this.timeline,
       ending: this.ending,
+      seed: this.seed,
     };
+  }
+
+  /** Shuffles each run of consecutive questions that share a randomized section. */
+  private shuffleSections(): void {
+    const sections = this.definition.sections;
+    let start = 0;
+    while (start < this.questions.length) {
+      const name = this.questions[start]?.section;
+      let end = start + 1;
+      while (name !== undefined && end < this.questions.length && this.questions[end]?.section === name) {
+        end++;
+      }
+      if (name !== undefined && sections[name]?.randomize && end - start > 1) {
+        const block = this.order.slice(start, end);
+        shuffle(block, random(this.seed ^ hash(`section:${name}:${String(start)}`)));
+        this.order.splice(start, end - start, ...block);
+        this.blockEntry.set(start, block[0] ?? start);
+      }
+      start = end;
+    }
+  }
+
+  /** The question after `index` in this session's order, or the question count past the last one. */
+  private nextInOrder(index: number): number {
+    const position = this.positions[index];
+    return position === undefined ? index + 1 : (this.order[position + 1] ?? this.questions.length);
   }
 
   private pick<T>(translations: Record<string, T>, get: (t: T) => string | undefined): string | undefined {
@@ -648,7 +717,7 @@ export class SurveySession {
         }
         const target = isNil(rule.goTo) ? undefined : this.definition.indexOf(rule.goTo);
         if (target !== undefined) {
-          return { index: target };
+          return { index: this.blockEntry.get(target) ?? target };
         }
       }
     }
@@ -657,7 +726,36 @@ export class SurveySession {
       ? this.definition.answerMap[String(q.id)]?.[this.definition.getAnswerKey(answer)]
       : undefined;
     const target = targetId === undefined ? undefined : this.definition.indexOf(targetId);
-    return { index: target ?? index + 1 };
+    return { index: target === undefined ? this.nextInOrder(index) : (this.blockEntry.get(target) ?? target) };
+  }
+}
+
+/** A small seeded random number generator (mulberry32), returning numbers in [0, 1). */
+function random(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** A 32-bit string hash (FNV-1a). */
+function hash(text: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
+  }
+  return h >>> 0;
+}
+
+/** Shuffles `items` in place (Fisher-Yates). */
+function shuffle(items: unknown[], rand: () => number): void {
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
   }
 }
 

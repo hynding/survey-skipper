@@ -137,6 +137,16 @@ are joined with `, ` and missing values become empty text.
 | `back` | `{ from, to }` | The session went back |
 | `complete` | `{ ending }` | The session finished |
 
+
+### Randomized order
+
+- `randomize: true` on a question shuffles its answer options. Options with `fixed: true` (such as "None of these")
+  and custom options keep their place. Read the order with `session.getOptions(question)`.
+- `sections: { ratings: { randomize: true } }` on the definition asks the consecutive questions of that section in a
+  random order. Rules still apply, and a rule that goes to the section's first question enters it at its shuffled
+  start.
+- The order comes from the session's `seed`, which is saved with it, so it stays the same across Back, resume and
+  reload. Pass `{ seed }` in the session state to choose it, or `{ random }` in the options to control new seeds.
 ### Going back
 
 `session.back()` returns to the previous question the respondent was shown (or `null` at the start; check with

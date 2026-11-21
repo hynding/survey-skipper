@@ -66,6 +66,7 @@ It returns:
 | `goTo(question)`, `canGoTo(question)` | Jump along the respondent's route, e.g. from a step list. `goTo` returns `false` for a question off the route. |
 | `finished`, `ending` | Whether the survey is over, and the `end` rule's ending, if any. |
 | `textOf(question)` | The question's text in the session's locale, with placeholders filled in. |
+| `optionsOf(question)` | The answer options in this respondent's order (shuffled when the question has `randomize`). |
 | `setContext(context)` | Replaces the context and re-renders. |
 | `session` | The underlying `SurveySession`. |
 

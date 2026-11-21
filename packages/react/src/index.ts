@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from 're
 import {
   SurveyDefinition,
   SurveySession,
+  type Answer,
   type AnswerInput,
   type AnswerValue,
   type Question,
@@ -51,6 +52,8 @@ export interface UseSurveyResult {
   ending: string | undefined;
   /** The question's text in the session's locale, with placeholders filled in. */
   textOf: (question: Question) => string;
+  /** The question's answer options in the order this respondent sees them (shuffled when it has `randomize`). */
+  optionsOf: (question: Question) => Answer[];
   setContext: (context: Record<string, unknown>) => void;
 }
 
@@ -181,6 +184,7 @@ export function useSurvey(
       finished: question === null,
       ending: session.ending,
       textOf: (q: Question) => session.getQuestionText(q),
+      optionsOf: (q: Question) => session.getOptions(q),
       setContext,
     };
     // `snapshot` changes whenever the session does.

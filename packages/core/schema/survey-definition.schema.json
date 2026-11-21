@@ -87,6 +87,19 @@
     "maxResponses": {
       "type": "integer",
       "minimum": 0
+    },
+    "sections": {
+      "type": "object",
+      "description": "Settings keyed by section name.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "randomize": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
     }
   },
   "additionalProperties": false,
@@ -142,6 +155,10 @@
         },
         "isCustom": {
           "type": "boolean"
+        },
+        "fixed": {
+          "type": "boolean",
+          "description": "Keeps the option in place when options are shuffled."
         }
       },
       "additionalProperties": false
@@ -312,6 +329,10 @@
             },
             "additionalProperties": false
           }
+        },
+        "randomize": {
+          "type": "boolean",
+          "description": "Shuffle the answer options, once per session."
         }
       },
       "additionalProperties": false
