@@ -222,13 +222,35 @@ export class SurveySession {
     if (!q) {
       return [];
     }
+    const all = [...this.carriedOptions(q), ...q.answers];
     if (!q.randomize) {
-      return [...q.answers];
+      return all;
     }
-    const movable = q.answers.filter((a) => !a.fixed && !a.isCustom);
+    const movable = all.filter((a) => !a.fixed && !a.isCustom);
     shuffle(movable, random(this.seed ^ hash(String(q.id))));
     let next = 0;
-    return q.answers.map((a) => (a.fixed || a.isCustom ? a : (movable[next++] ?? a)));
+    return all.map((a) => (a.fixed || a.isCustom ? a : (movable[next++] ?? a)));
+  }
+
+  /** The options `q` carries forward from an earlier question (`answersFrom`), in that question's order. */
+  private carriedOptions(q: Question, seen = new Set<string>()): Answer[] {
+    const from = q.answersFrom;
+    if (!from || seen.has(String(q.id))) {
+      return [];
+    }
+    seen.add(String(q.id));
+    const source = this.definition.getQuestionById(from.question);
+    if (!source) {
+      return [];
+    }
+    const sourceOptions = [...this.carriedOptions(source, seen), ...source.answers].filter((a) => !a.isCustom);
+    const include = from.include ?? 'selected';
+    if (include === 'all') {
+      return sourceOptions;
+    }
+    const answer = this.answers[String(source.id)];
+    const picked = answer?.isValid() ? (Array.isArray(answer.value) ? answer.value : [answer.value]).map(String) : [];
+    return sourceOptions.filter((a) => picked.includes(String(a.value)) === (include === 'selected'));
   }
 
   /** The survey title in the session's locale. */
@@ -345,8 +367,12 @@ export class SurveySession {
 
   /**
    * Whether `question` would be asked: its `showIf` holds (or is unset) and its `skipIf` does not hold (or is unset).
+   * A question with `answersFrom` is also routed past when no options carry forward.
    */
   isShown(question: Question): boolean {
+    if (question.answersFrom && this.carriedOptions(question).length === 0) {
+      return false;
+    }
     const data = this.getRuleData(question);
     return evaluate(question.showIf, data) && (question.skipIf === undefined || !evaluate(question.skipIf, data));
   }
@@ -377,7 +403,7 @@ export class SurveySession {
     if (!target) {
       return { ok: false, errors: [] };
     }
-    const errors = validateAnswer(target, answer);
+    const errors = validateAnswer(target, answer, this.getOptions(target));
     if (errors.length === 0) {
       this.setAnswer(answer, target);
     } else {
@@ -389,7 +415,7 @@ export class SurveySession {
   /** Validates the stored answer to the current question, or to `question` when given. */
   validate(question?: Question): ValidationError[] {
     const target = question ?? this.getQuestion();
-    return target ? validateAnswer(target, this.answers[String(target.id)]) : [];
+    return target ? validateAnswer(target, this.answers[String(target.id)], this.getOptions(target)) : [];
   }
 
   /** Answers the current question, or `futureQuestion` when given (a pre-answer), without validating. */

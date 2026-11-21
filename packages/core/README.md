@@ -138,6 +138,21 @@ are joined with `, ` and missing values become empty text.
 | `complete` | `{ ending }` | The session finished |
 
 
+### Carry-forward options
+
+`answersFrom` builds a choice question's options from an earlier one:
+
+```ts
+{ id: 'uses', type: 'multi', answers: [{ value: 'netflix' }, { value: 'hulu' }, { value: 'disney' }] },
+{ id: 'favorite', type: 'single', answersFrom: { question: 'uses' } },
+{ id: 'consider', type: 'multi', answersFrom: { question: 'uses', include: 'unselected' },
+  answers: [{ value: 'none', text: 'None of these', fixed: true }] },
+```
+
+`include` is `selected` (the default), `unselected` or `all`. The question's own `answers` come after the carried
+ones. `session.getOptions(question)` returns the result, and `session.answer()` validates against it. When nothing
+carries forward, the question is routed past. Custom options are not carried.
+
 ### Scoring
 
 Give answer options a `score` to build quizzes, assessments or lead scoring:

@@ -67,6 +67,17 @@ export interface QuestionInput {
    * `fixed`, and custom options, keep their place.
    */
   randomize?: boolean;
+  /**
+   * Builds this question's options from an earlier choice question: the options the respondent picked there
+   * (`selected`, the default), the ones they didn't (`unselected`), or all of them. The question's own `answers` are
+   * added after them. When no options carry forward, the question is routed past.
+   */
+  answersFrom?: AnswersFrom;
+}
+
+export interface AnswersFrom {
+  question: QuestionId;
+  include?: 'selected' | 'unselected' | 'all';
 }
 
 export class Question {
@@ -82,8 +93,9 @@ export class Question {
   validation: ValidationRules;
   translations: Record<string, QuestionTranslation>;
   randomize: boolean | undefined;
+  answersFrom: AnswersFrom | undefined;
 
-  constructor({ id, text, answers = [], rules = [], showIf, skipIf, type, section, required = false, validation = {}, translations = {}, randomize }: QuestionInput) {
+  constructor({ id, text, answers = [], rules = [], showIf, skipIf, type, section, required = false, validation = {}, translations = {}, randomize, answersFrom }: QuestionInput) {
     if (isNil(id)) {
       throw new TypeError('Question requires an id');
     }
@@ -99,6 +111,7 @@ export class Question {
     this.validation = { ...validation };
     this.translations = { ...translations };
     this.randomize = randomize;
+    this.answersFrom = answersFrom === undefined ? undefined : { ...answersFrom };
   }
 
   /** Wraps a plain object (e.g. deserialized JSON) in a Question; passes Questions through. */

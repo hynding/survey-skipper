@@ -27,8 +27,14 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 /**
  * Checks an answer against the question's `type`, `required` flag, answer options and `validation` rules.
  * Returns an empty list when the answer is acceptable. A missing answer only fails when the question is required.
+ * Pass `options` to check choices against them instead of the question's own `answers`, as sessions do for
+ * carried-forward options. Without `options`, choices on a question with `answersFrom` are not checked.
  */
-export function validateAnswer(question: Question, input: Answer | AnswerInput | null | undefined): ValidationError[] {
+export function validateAnswer(
+  question: Question,
+  input: Answer | AnswerInput | null | undefined,
+  options?: Answer[],
+): ValidationError[] {
   const answer = input ? Answer.from(input) : undefined;
   if (!answer?.isValid()) {
     return question.required ? [error('required', 'An answer is required')] : [];
@@ -37,7 +43,8 @@ export function validateAnswer(question: Question, input: Answer | AnswerInput |
   if (typeError) {
     return [typeError];
   }
-  return [...checkOptions(question, answer), ...checkRules(question, answer.value), ...checkCustom(question, answer.value)];
+  const optionErrors = options === undefined && question.answersFrom ? [] : checkOptions(question, answer, options ?? question.answers);
+  return [...optionErrors, ...checkRules(question, answer.value), ...checkCustom(question, answer.value)];
 }
 
 function checkType(question: Question, value: AnswerValue): ValidationError | undefined {
@@ -82,13 +89,13 @@ function checkCustom(question: Question, value: AnswerValue): ValidationError[] 
   return errors;
 }
 
-function checkOptions(question: Question, answer: Answer): ValidationError[] {
+function checkOptions(question: Question, answer: Answer, choices: Answer[]): ValidationError[] {
   if (question.type !== 'single' && question.type !== 'multi') {
     return [];
   }
-  const options = question.answers.filter((a) => !a.isCustom).map((a) => a.value);
-  const allowsCustom = question.answers.some((a) => a.isCustom);
-  if (options.length === 0 || allowsCustom || answer.isCustom) {
+  const options = choices.filter((a) => !a.isCustom).map((a) => a.value);
+  const allowsCustom = choices.some((a) => a.isCustom);
+  if ((options.length === 0 && !question.answersFrom) || allowsCustom || answer.isCustom) {
     return [];
   }
   const values: ScalarValue[] = Array.isArray(answer.value) ? answer.value : [answer.value as ScalarValue];

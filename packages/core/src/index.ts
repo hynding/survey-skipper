@@ -2,6 +2,7 @@ export { Answer } from './answer.js';
 export type { AnswerInput, AnswerValue, ScalarValue } from './answer.js';
 export { Question } from './question.js';
 export type {
+  AnswersFrom,
   BuiltInQuestionType,
   QuestionId,
   QuestionInput,

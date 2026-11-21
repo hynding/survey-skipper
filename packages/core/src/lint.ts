@@ -79,7 +79,10 @@ export function lintDefinition(definition: SurveyDefinition): LintIssue[] {
         issues.push({ severity: 'error', code: 'unknown-validator', message: `"${String(q.id)}" uses unregistered validator "${entry.name}"`, questionId: q.id });
       }
     }
-    if ((q.type === 'single' || q.type === 'multi') && q.answers.length === 0) {
+    if (q.answersFrom && !ids.has(String(q.answersFrom.question))) {
+      issues.push({ severity: 'warning', code: 'unknown-reference', message: `"${String(q.id)}" carries options from unknown question "${String(q.answersFrom.question)}"`, questionId: q.id });
+    }
+    if ((q.type === 'single' || q.type === 'multi') && q.answers.length === 0 && !q.answersFrom) {
       issues.push({ severity: 'warning', code: 'missing-options', message: `"${String(q.id)}" is a ${q.type} choice question with no answer options`, questionId: q.id });
     }
   }
