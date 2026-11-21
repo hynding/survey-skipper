@@ -337,6 +337,26 @@
         "randomize": {
           "type": "boolean",
           "description": "Shuffle the answer options, once per session."
+        },
+        "answersFrom": {
+          "type": "object",
+          "description": "Build options from an earlier choice question.",
+          "properties": {
+            "question": {
+              "$ref": "#/$defs/id"
+            },
+            "include": {
+              "enum": [
+                "selected",
+                "unselected",
+                "all"
+              ]
+            }
+          },
+          "required": [
+            "question"
+          ],
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
