@@ -8,6 +8,8 @@ export interface RespondentProps {
   definitionId: string;
   /** Context for a new session, e.g. from the link's query string. */
   context?: Record<string, unknown>;
+  /** Called once when the respondent finishes a session. */
+  onFinish?: ((view: SessionView) => void) | undefined;
   /** Where the session id is remembered so a reload resumes. Default `localStorage`. */
   storage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | undefined;
 }
@@ -15,7 +17,7 @@ export interface RespondentProps {
 const key = (definitionId: string) => `survey-skipper:session:${definitionId}`;
 
 /** Answers one survey through survey-skipper-server: a page at a time, with Back, progress and validation. */
-export function Respondent({ api, definitionId, context, storage = safeStorage() }: RespondentProps) {
+export function Respondent({ api, definitionId, context, onFinish, storage = safeStorage() }: RespondentProps) {
   const [view, setView] = useState<SessionView | null>(null);
   const [total, setTotal] = useState<number | null>(null);
   const [drafts, setDrafts] = useState<Record<string, AnswerValue | undefined>>({});
@@ -69,6 +71,14 @@ export function Respondent({ api, definitionId, context, storage = safeStorage()
     };
     // The component is keyed by survey, so this runs once per survey.
   }, [api, definitionId]);
+
+  const reported = useRef<string | null>(null);
+  useEffect(() => {
+    if (view?.finished && reported.current !== view.sessionId) {
+      reported.current = view.sessionId;
+      onFinish?.(view);
+    }
+  }, [view, onFinish]);
 
   const run = async (step: () => Promise<SessionView>) => {
     setBusy(true);

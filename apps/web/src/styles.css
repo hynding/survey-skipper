@@ -104,3 +104,9 @@ main:has(.builder) { max-width: 80rem; }
 .matrix th, .matrix td { padding: 0.35rem 0.5rem; text-align: center; }
 .matrix tbody th { text-align: left; font-weight: normal; }
 .matrix tbody tr { border-top: 1px solid var(--line); }
+main.embed { padding-top: 0.5rem; }
+.share { margin: 0.75rem 0; }
+.share summary { cursor: pointer; color: var(--accent); }
+.share-row { display: flex; gap: 0.5rem; margin-bottom: 0.25rem; }
+.share-row input { flex: 1; min-width: 0; }
+.share textarea { width: 100%; font-family: ui-monospace, monospace; font-size: 0.8rem; }

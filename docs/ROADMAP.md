@@ -230,7 +230,7 @@ Items are listed in the order they will be built. IDs continue the first round's
 | 7 | A8 | ✅ Built (core 3.12). **Ranking and matrix questions.** `ranking` (order all options) and `matrix` (rows rated on shared columns, answer is an object by row). Validation, lint, aggregation and UI support. | core, web | M |
 | 8 | R8 | ✅ Built (core 3.13, server 0.7). **Quotas.** `quotas: [{ id, if, limit, end }]` on the definition. The server counts completed sessions per quota and passes the counts to sessions as `quotaCounts` (not context, so respondents cannot change them); a session that would land in a full quota ends with the quota's ending. | core, server | M |
 | 9 | SV2 | ✅ Built (server 0.8). **Webhooks.** Server option to POST session events (`complete`, optionally `answer`) to configured URLs, signed with an HMAC header, with retries. | server | S |
-| 10 | S4 | **Embedding and share links.** `#/embed/<id>` renders a survey without the app chrome and posts `survey-skipper:complete` to the parent window; the builder shows a share link and an iframe snippet. | web | S |
+| 10 | S4 | ✅ Built (`apps/web` 0.5). **Embedding and share links.** `#/embed/<id>` renders a survey without the app chrome and posts `survey-skipper:complete` to the parent window; the builder shows a share link and an iframe snippet. | web | S |
 | 11 | R9 | **`skipped` operator** (left over from R2): true when a question was routed past, so later rules can react to it. | core | S |
 | 12 | M5 | **Definition diff.** `diffDefinitions(a, b)` lists added, removed and changed questions, options and rules; the builder shows the diff against the saved version before saving. | core, web | M |
 
