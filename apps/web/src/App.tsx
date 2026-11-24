@@ -46,7 +46,13 @@ export function parseRoute(hash: string): Route {
   return { page: 'survey', id: decodeURIComponent(match[2]), context, ...(match[1] === 'embed' ? { embed: true } : {}) };
 }
 
-export function App({ api: given }: { api?: Api }) {
+export interface DemoOptions {
+  /** Clears the demo's surveys and responses and brings back the samples. */
+  onReset: () => void;
+}
+
+/** The app. Pass `demo` to show the demo banner (the GitHub Pages build runs everything in the browser). */
+export function App({ api: given, demo }: { api?: Api; demo?: DemoOptions }) {
   const api = useMemo(() => given ?? new Api(), [given]);
   const [route, setRoute] = useState(() => parseRoute(window.location.hash));
 
@@ -73,6 +79,7 @@ export function App({ api: given }: { api?: Api }) {
           <a href="#/builder">Builder</a>
         </nav>
       </header>
+      {demo ? <DemoBanner {...demo} /> : null}
       {route.page === 'builder' ? (
         <Builder key={route.id ?? 'new'} api={api} definitionId={route.id} />
       ) : route.page === 'results' ? (
@@ -83,6 +90,28 @@ export function App({ api: given }: { api?: Api }) {
         <Home api={api} />
       )}
     </main>
+  );
+}
+
+/** Says the app is a demo whose data stays in this browser, with a button to start over. */
+export function DemoBanner({ onReset }: DemoOptions) {
+  return (
+    <aside className="demo-banner" aria-label="Demo mode">
+      <p>
+        <strong>Demo.</strong> Everything runs in your browser and is saved only on this device. Try a sample survey,
+        build your own, and see the results.
+      </p>
+      <button
+        type="button"
+        onClick={() => {
+          if (window.confirm('Delete every survey and response in this demo and bring back the samples?')) {
+            onReset();
+          }
+        }}
+      >
+        Reset demo
+      </button>
+    </aside>
   );
 }
 

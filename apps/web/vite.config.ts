@@ -10,6 +10,7 @@ const proxy = {
 };
 
 export default defineConfig({
+  base: './',
   plugins: [react()],
   server: { proxy },
   preview: { proxy },
