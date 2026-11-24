@@ -1,6 +1,6 @@
 {
   "name": "survey-skipper-server",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "HTTP API for survey-skipper definitions, sessions and responses",
   "type": "module",
   "main": "dist/index.js",
@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./fetch": {
+      "types": "./dist/fetch.d.ts",
+      "default": "./dist/fetch.js"
     },
     "./package.json": "./package.json"
   },

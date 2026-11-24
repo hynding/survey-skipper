@@ -25,7 +25,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # VITE_DEMO runs the survey server inside the page (see apps/web/README.md), so Pages needs no backend.
       - run: pnpm run build
+        env:
+          VITE_DEMO: 'true'
       - uses: actions/upload-pages-artifact@v3
         with:
           path: apps/web/dist

@@ -13,8 +13,8 @@ strict-TypeScript packages:
 | `packages/core` | `survey-skipper` | The library. Dual ESM + CommonJS build (`dist/` and `dist/esm/`). Only runtime dependency: `json-logic-js`. Ships `schema/survey-definition.schema.json` as `survey-skipper/schema.json`. |
 | `packages/yaml` | `survey-skipper-yaml` | `parseSurvey`, `loadSurvey`, `stringifySurvey`. Dual build. |
 | `packages/react` | `survey-skipper-react` | `useSurvey()` hook. Dual build. |
-| `apps/server` | `survey-skipper-server` | ESM only, `node:http`, no framework. `createHandler`, `FileStore`, webhooks. `src/main.ts` is the CLI entry (env vars). |
-| `apps/web` | `survey-skipper-web` (private) | Vite 8 + React 19. Hash routes in `src/App.tsx`; one component file per screen (`Home`, `Builder`, `Graph`, `Preview`, `Respondent`, `Results`, `Share`, `QuestionField`). Talks to the server through `src/api.ts`. |
+| `apps/server` | `survey-skipper-server` | ESM only, no framework. Routes live in `src/fetch.ts` (`createFetchHandler`, browser-safe, exported as `survey-skipper-server/fetch`: keep Node-only imports out of it); `src/handler.ts` wraps it for `node:http` and adds webhooks. `FileStore`. `src/main.ts` is the CLI entry (env vars). |
+| `apps/web` | `survey-skipper-web` (private) | Vite 8 + React 19. Hash routes in `src/App.tsx`; one component file per screen (`Home`, `Builder`, `Graph`, `Preview`, `Respondent`, `Results`, `Share`, `QuestionField`). Talks to the server through `src/api.ts`. `VITE_DEMO=true` (the GitHub Pages build, `.github/workflows/pages.yml`) runs the server in the page instead (`src/demo.ts`, samples in `src/samples.ts`). |
 
 Dependency order: core → yaml, react → server → web. Packages import each other's **built `dist/`**, so a
 package's typecheck and tests need its dependencies built first (`pnpm run check` and `pnpm run build` handle that).

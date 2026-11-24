@@ -15,8 +15,8 @@ a web app.
 | [`survey-skipper`](packages/core) | `packages/core` | 3.15 | The core library, framework-agnostic and published to npm (ESM and CommonJS). Definitions and sessions, JsonLogic rules, question types and validation, pages, Back and jump navigation, piped text, translations, scoring, randomization, carry-forward options, quotas, lifecycle, timeline and analytics, CSV export, definition diff and migration, lint and route simulation, plugins and storage. |
 | [`survey-skipper-yaml`](packages/yaml) | `packages/yaml` | 0.8 | Read and write survey definitions, rules included, as YAML. |
 | [`survey-skipper-react`](packages/react) | `packages/react` | 0.3 | `useSurvey()`, a React hook that runs a session in a component. |
-| [`survey-skipper-server`](apps/server) | `apps/server` | 0.8 | An HTTP API (plain `node:http`) for definitions, sessions, responses, stats, quotas and webhooks, over any `SurveyStore`. |
-| [`survey-skipper-web`](apps/web) | `apps/web` | 0.6 | The web app (Vite + React, private): survey list, YAML builder with live lint, graph, preview and diff, the respondent app, results dashboard, and share links and embeds. |
+| [`survey-skipper-server`](apps/server) | `apps/server` | 0.9 | An HTTP API (plain `node:http`, or any Fetch API runtime) for definitions, sessions, responses, stats, quotas and webhooks, over any `SurveyStore`. |
+| [`survey-skipper-web`](apps/web) | `apps/web` | 0.7 | The web app (Vite + React, private): survey list, YAML builder with live lint, graph, preview and diff, the respondent app, results dashboard, and share links and embeds. Has a server-free demo mode for GitHub Pages. |
 
 How they fit together:
 
@@ -66,6 +66,12 @@ Open `#/builder`, write a survey in YAML, save it, then answer it at `#/s/<id>` 
 `#/results/<id>`. Set `DATA_DIR` on the server to keep data on disk, and `API_KEY` to protect creator routes. See the
 [server](apps/server) and [web](apps/web) READMEs for more.
 
+### Demo without a server
+
+`pnpm --filter survey-skipper-web build:demo` builds the app with the server running inside the page and data kept in
+`localStorage`, seeded with sample surveys. `.github/workflows/pages.yml` deploys this build to GitHub Pages on every
+push to `master`. See the [web README](apps/web#demo-mode-github-pages).
+
 ## Development
 
 ```sh
@@ -84,6 +90,7 @@ pnpm --filter survey-skipper run check   # one package
 - Tests: the core uses Cucumber (`packages/core/features/*.feature`); the other packages use `node:test` through tsx,
   with jsdom and Testing Library for React. The web app's tests run against a real in-process server.
 - CI (`.github/workflows/ci.yml`) runs `pnpm run check` on Node 22 and 24 for every push and pull request.
+  `.github/workflows/pages.yml` deploys the web app's demo build to GitHub Pages on every push to `master`.
 
 [CLAUDE.md](CLAUDE.md) has the conventions in more detail. The [roadmap](docs/ROADMAP.md) records what was planned
 and built, by feature ID; both rounds are complete.

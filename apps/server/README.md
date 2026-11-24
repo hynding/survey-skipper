@@ -46,6 +46,22 @@ its `FileStorage` key-value layer is exported too. `createHandler` options:
 | `now` | `() => new Date()` | Clock for `opensAt` / `closesAt` and webhook timestamps. |
 | `webhooks` | none | A list of webhooks, or a `WebhookSender` (see Webhooks). |
 
+### Fetch API handler
+
+`createFetchHandler(options)` is the same API as a Fetch API handler, `(request: Request) => Promise<Response>`, for
+runtimes other than `node:http` (Deno, Bun, Cloudflare Workers, a service worker, or the page itself). Import it from
+`survey-skipper-server/fetch`, which has no Node-only imports. It takes the options above except `webhooks`; pass
+`onEvent(payload)` to receive the same `start`, `answer` and `complete` payloads instead. `createHandler` is a thin
+`node:http` wrapper around it. The web app's [demo mode](../web#demo-mode-github-pages) uses it to run in the browser.
+
+```ts
+import { MemoryStore } from 'survey-skipper';
+import { createFetchHandler } from 'survey-skipper-server/fetch';
+
+const handle = createFetchHandler({ store: new MemoryStore() });
+export default { fetch: handle };   // e.g. a Cloudflare Worker or Bun.serve
+```
+
 `view(sessionId, session)` builds the session view the routes return, if you add routes of your own.
 
 ## Routes

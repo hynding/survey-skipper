@@ -70,12 +70,29 @@ app's origin, and serve `dist/`.
 VITE_API_URL=https://surveys-api.example.com pnpm --filter survey-skipper-web build
 ```
 
+## Demo mode (GitHub Pages)
+
+Built with `VITE_DEMO=true`, the app needs no server: `src/demo.ts` runs the server's routes inside the page
+(`createFetchHandler` from `survey-skipper-server/fetch`) and keeps surveys and responses in `localStorage`, under
+`survey-skipper-demo:` keys. The first visit adds three sample surveys (`src/samples.ts`) that show answer-based
+branching, score-based branching with piped text, and carry-forward options. A banner says it is a demo and has a
+**Reset demo** button that clears the demo's data and brings the samples back. The demo code is loaded only in this
+build, so the regular app does not ship it.
+
+```sh
+pnpm --filter survey-skipper-web build:demo   # then serve dist/ from any static host
+```
+
+`.github/workflows/pages.yml` builds this on every push to `master` and deploys it to GitHub Pages. Vite's `base` is
+`./`, so the app works from a repository subpath. To turn it on, set **Settings → Pages → Source** to **GitHub
+Actions** in the repository.
+
 ## Code layout
 
 `src/App.tsx` parses the hash route, picks a screen and holds the `Embed` wrapper. One file per screen: `Home`, `Builder` (with `Graph` and
 `Preview`), `Respondent`, `Results` and `Share`. `QuestionField` renders an input
 for each question type and is shared by the respondent app and the preview. `api.ts` is the typed client for the
-server.
+server. `demo.ts` and `samples.ts` are the demo mode.
 
 ## Development
 
